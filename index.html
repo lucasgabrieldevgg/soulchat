@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoulChat — Converse com qualquer personagem</title>
+<meta name="description" content="Crie e converse com personagens de IA. Goku, Sherlock, Einstein ou qualquer um que você imaginar.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg-0:#0a0612;--bg-1:#150d24;--bg-2:#1f1435;--bg-3:#2a1d48;--border:#382559;--text:#f0e8ff;--dim:#9485b8;--accent:#c084fc;--accent2:#f472b6;--accent3:#818cf8;--green:#34d399;--red:#f87171;--radius:14px}
+html{color-scheme:dark}
+body{background:var(--bg-0);color:var(--text);font-family:'Inter',-apple-system,sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 80% 0%,rgba(192,132,252,.15),transparent 60%),radial-gradient(ellipse 60% 50% at 0% 100%,rgba(244,114,182,.1),transparent 60%);pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:20px 16px 48px;min-height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;cursor:pointer;text-decoration:none}
+.logo-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 8px 24px -6px var(--accent)}
+.logo h1{font-size:20px;font-weight:700;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.logo p{font-size:11px;color:var(--dim)}
+.btn{padding:8px 14px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:.2s;font-family:inherit}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff}
+.btn-primary:hover{color:#fff;box-shadow:0 8px 24px -8px var(--accent)}
+.btn-icon{padding:8px;width:36px;height:36px;justify-content:center}
+select{padding:6px 28px 6px 10px;border:1px solid var(--border);background:var(--bg-2) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239485b8'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat right 6px center/14px;color:var(--text);border-radius:8px;cursor:pointer;font-size:12px;appearance:none;font-family:inherit}
+.home{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 16px;text-align:center}
+.home-icon{font-size:64px;margin-bottom:12px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.home h2{font-size:32px;margin-bottom:10px;font-weight:800;background:linear-gradient(135deg,var(--text),var(--accent));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.home>p{color:var(--dim);font-size:16px;max-width:500px;margin-bottom:24px;line-height:1.6}
+.cta{padding:14px 32px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 10px 30px -8px var(--accent);transition:.2s;font-family:inherit}
+.cta:hover{transform:translateY(-2px);box-shadow:0 14px 36px -8px var(--accent)}
+.featured{margin-top:36px;max-width:700px;width:100%}
+.featured h3{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:12px;text-align:left}
+.featured-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.fc{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:.2s;display:flex;gap:10px;align-items:center}
+.fc:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 24px -10px var(--accent)}
+.fc-avatar{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;overflow:hidden}
+.fc-avatar img{width:100%;height:100%;object-fit:cover}
+.fc h4{font-size:13px;font-weight:600}
+.fc p{font-size:11px;color:var(--dim)}
+.recent{margin-top:24px;max-width:700px;width:100%}
+.recent-grid{display:flex;gap:8px;flex-wrap:wrap}
+.recent-chip{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:6px}
+.recent-chip:hover{border-color:var(--accent)}
+.create{flex:1;display:flex;flex-direction:column;align-items:center;padding:16px}
+.create-card{background:var(--bg-1);border:1px solid var(--border);border-radius:20px;padding:28px;max-width:560px;width:100%;box-shadow:0 20px 60px -20px rgba(192,132,252,.3)}
+.create-card h2{font-size:22px;font-weight:700;margin-bottom:6px}
+.create-card>p{color:var(--dim);font-size:13px;margin-bottom:20px}
+.magic{background:linear-gradient(135deg,rgba(192,132,252,.08),rgba(244,114,182,.08));border:1px solid var(--accent);border-radius:14px;padding:16px;margin-bottom:20px}
+.magic-title{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:14px;font-weight:600;color:var(--accent)}
+.magic-title div{width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:12px}
+.magic p{font-size:12px;color:var(--dim);margin-bottom:12px;line-height:1.5}
+.magic-row{display:flex;gap:8px}
+.magic-row input{flex:1;padding:10px 12px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);border-radius:8px;font-family:inherit;font-size:13px;outline:none;transition:.2s}
+.magic-row input:focus{border-color:var(--accent)}
+.magic-btn{padding:10px 16px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px;white-space:nowrap;transition:.2s}
+.magic-btn:hover{box-shadow:0 6px 20px -6px var(--accent)}
+.magic-btn:disabled{opacity:.6;cursor:not-allowed}
+.magic-status{margin-top:10px;font-size:12px;color:var(--accent);display:none;align-items:center;gap:6px}
+.magic-status.show{display:flex}
+.spin{width:12px;height:12px;border:2px solid rgba(192,132,252,.3);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.1em}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.ig{margin-bottom:14px}
+.ig label{display:block;margin-bottom:4px;font-size:12px;font-weight:500;color:var(--dim)}
+.ig input,.ig textarea{width:100%;padding:10px 12px;border:1px solid var(--border);background:var(--bg-2);color:var(--text);border-radius:8px;font-family:inherit;font-size:13px;outline:none;transition:.2s}
+.ig input:focus,.ig textarea:focus{border-color:var(--accent)}
+.ig textarea{resize:vertical;min-height:70px;line-height:1.5}
+.traits{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px}
+.chip{padding:8px 6px;border:1px solid var(--border);background:var(--bg-2);border-radius:8px;cursor:pointer;text-align:center;transition:.2s;font-size:12px}
+.chip:hover{border-color:var(--accent)}
+.chip.sel{border-color:var(--accent);background:rgba(192,132,252,.15);color:var(--accent)}
+.chat{flex:1;display:flex;flex-direction:column;min-height:0;gap:12px}
+.chat-header{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.chat-info{display:flex;align-items:center;gap:10px;cursor:pointer}
+.chat-avatar{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;flex-shrink:0}
+.chat-avatar img{width:100%;height:100%;object-fit:cover}
+.chat-info h3{font-size:14px;font-weight:600}
+.chat-info p{font-size:11px;color:var(--dim)}
+.msgs{flex:1;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:16px;overflow-y:auto;min-height:300px;max-height:55vh;display:flex;flex-direction:column;gap:12px}
+.msg{display:flex;gap:8px;max-width:85%}
+.msg.user{align-self:flex-end;flex-direction:row-reverse}
+.msg-av{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;overflow:hidden}
+.msg-av img{width:100%;height:100%;object-fit:cover}
+.msg.user .msg-av{background:var(--bg-3)}
+.msg.char .msg-av{background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.msg-b{padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;background:var(--bg-2);border:1px solid var(--border)}
+.msg.user .msg-b{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-bottom-right-radius:4px}
+.msg.char .msg-b{border-bottom-left-radius:4px}
+.msg-b em{color:var(--dim);font-style:italic}
+.msg-b strong{color:var(--accent3)}
+.typing{display:flex;gap:3px;padding:3px 0}
+.typing span{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:tp 1.4s infinite}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+@keyframes tp{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1}}
+.input-area{background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);padding:10px;display:flex;gap:8px;align-items:flex-end}
+.input-area textarea{flex:1;border:none;background:transparent;color:var(--text);font-family:inherit;font-size:13px;resize:none;outline:none;padding:6px;min-height:22px;max-height:100px;line-height:1.5}
+.send{width:36px;height:36px;border:none;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:.2s}
+.send:hover{transform:scale(1.05)}
+.send:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-bg.show{display:flex}
+.modal{background:var(--bg-1);border:1px solid var(--border);border-radius:20px;padding:24px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto}
+.modal h3{font-size:18px;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.modal-av{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden}
+.modal-av img{width:100%;height:100%;object-fit:cover}
+.md{margin-bottom:12px}
+.md-l{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin-bottom:2px}
+.md-v{font-size:13px;line-height:1.5}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);padding:10px 18px;background:var(--bg-3);color:var(--text);border:1px solid var(--accent);border-radius:8px;font-size:12px;font-weight:500;z-index:1000;transition:.3s;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+footer{text-align:center;margin-top:24px;padding:16px;color:var(--dim);font-size:11px;border-top:1px solid var(--border)}
+footer a{color:var(--accent);text-decoration:none}
+@media(max-width:640px){.wrap{padding:12px 10px 36px}.home h2{font-size:24px}.home>p{font-size:14px}.create-card{padding:20px}.msgs{padding:12px;min-height:240px}.msg-b{font-size:12px}.magic-row{flex-direction:column}.featured-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<a class="logo" onclick="goHome()">
+<div class="logo-icon">💬</div>
+<div><h1>SoulChat</h1><p>Converse com qualquer personagem</p></div>
+</a>
+<div style="display:flex;gap:6px;align-items:center">
+<select id="lang">
+<option value="pt-BR">🇧🇷 PT</option>
+<option value="en">🇺🇸 EN</option>
+<option value="es">🇪🇸 ES</option>
+<option value="fr">🇫🇷 FR</option>
+<option value="de">🇩🇪 DE</option>
+<option value="it">🇮🇹 IT</option>
+<option value="ja">🇯🇵 JP</option>
+<option value="zh-CN">🇨🇳 ZH</option>
+</select>
+</div>
+</header>
+<div class="home" id="home">
+<div class="home-icon">💬</div>
+<h2>Converse com qualquer personagem</h2>
+<p>Crie personagens de IA com personalidade, voz e história. A IA pesquisa na Wikipedia e dá vida ao personagem automaticamente.</p>
+<button class="cta" onclick="showCreate()">✨ Criar personagem →</button>
+<div class="featured" id="featuredSection">
+<h3>Personagens sugeridos</h3>
+<div class="featured-grid" id="featuredGrid"></div>
+</div>
+<div class="recent" id="recentSection" style="display:none">
+<h3>Recentes</h3>
+<div class="recent-grid" id="recentGrid"></div>
+</div>
+</div>
+<div class="create" id="create" style="display:none">
+<div class="create-card">
+<h2>Criar personagem</h2>
+<p>A IA pesquisa o personagem pra você, ou preencha manualmente.</p>
+<div class="magic">
+<div class="magic-title"><div>🪄</div> Gerar com IA</div>
+<p>Digite só o nome. A IA pesquisa na Wikipedia, gera descrição, personalidade e voz.</p>
+<div class="magic-row">
+<input type="text" id="magicInput" placeholder="Ex: Goku, Sherlock Holmes, Einstein...">
+<button class="magic-btn" id="magicBtn" onclick="generateWithAI()">🪄 Gerar</button>
+</div>
+<div class="magic-status" id="magicStatus"><div class="spin"></div><span id="magicText">Pesquisando...</span></div>
+</div>
+<div class="divider">Ou preencha manualmente</div>
+<div class="ig"><label>Nome *</label><input type="text" id="charName" placeholder="Ex: Goku, Sherlock..."></div>
+<div class="ig"><label>Universo / Origem</label><input type="text" id="charUniverse" placeholder="Ex: Dragon Ball, BBC Sherlock..."></div>
+<div class="ig"><label>Descrição / História</label><textarea id="charDesc" placeholder="Quem é, o que faz, características..."></textarea></div>
+<div class="ig"><label>Personalidade</label><div class="traits" id="traitsGrid"></div></div>
+<div class="ig"><label>Como ele fala?</label><input type="text" id="charSpeech" placeholder="Sotaque, gírias, expressões..."></div>
+<div class="ig"><label>Primeira mensagem</label><input type="text" id="charGreeting" placeholder="Ex: 'E aí! Como posso ajudar?'"></div>
+<div style="display:flex;gap:10px;margin-top:18px">
+<button class="btn" onclick="goHome()">Cancelar</button>
+<button class="btn btn-primary" onclick="createCharacter()" style="flex:1">Iniciar conversa</button>
+</div>
+</div>
+</div>
+<div class="chat" id="chat" style="display:none">
+<div class="chat-header">
+<div class="chat-info" onclick="showModal()">
+<div class="chat-avatar" id="chatAvatar">🤖</div>
+<div><h3 id="chatName">—</h3><p id="chatUniverse">—</p></div>
+</div>
+<div style="display:flex;gap:6px">
+<button class="btn btn-icon" onclick="clearChat()" title="Limpar">🗑️</button>
+<button class="btn btn-icon" onclick="goHome()" title="Voltar">←</button>
+</div>
+</div>
+<div class="msgs" id="chatMsgs"></div>
+<div class="input-area">
+<textarea id="chatInput" placeholder="Mande mensagem..." rows="1" onkeydown="chatKey(event)" oninput="autoResize(this)"></textarea>
+<button class="send" id="sendBtn" onclick="sendMessage()">↑</button>
+</div>
+</div>
+<footer>Feito com 💜 por <a href="https://github.com/lucasgabrieldevgg" target="_blank">Lucas Gabriel</a> · Pollinations + Wikipedia · 100% no navegador</footer>
+</div>
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
+<div class="modal">
+<h3 id="modalTitle">—</h3>
+<div id="modalBody"></div>
+<button class="btn" style="margin-top:14px;width:100%" onclick="closeModal()">Fechar</button>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const TRAITS=[
+{id:'calm',ic:'🧘',lb:{'pt-BR':'Calmo',en:'Calm',es:'Calmo',fr:'Calme',de:'Ruhig',it:'Calmo',ja:'穏やか','zh-CN':'平静'}},
+{id:'aggressive',ic:'😤',lb:{'pt-BR':'Agressivo',en:'Aggressive',es:'Agresivo',fr:'Agressif',de:'Aggressiv',it:'Aggressivo',ja:'攻撃的','zh-CN':'好斗'}},
+{id:'happy',ic:'😄',lb:{'pt-BR':'Feliz',en:'Happy',es:'Feliz',fr:'Heureux',de:'Fröhlich',it:'Felice',ja:'幸せ','zh-CN':'快乐'}},
+{id:'sarcastic',ic:'😏',lb:{'pt-BR':'Sarcástico',en:'Sarcastic',es:'Sarcástico',fr:'Sarcastique',de:'Sarkastisch',it:'Sarcastico',ja:'皮肉','zh-CN':'讽刺'}},
+{id:'mysterious',ic:'🕵️',lb:{'pt-BR':'Misterioso',en:'Mysterious',es:'Misterioso',fr:'Mystérieux',de:'Mysteriös',it:'Misterioso',ja:'神秘的','zh-CN':'神秘'}},
+{id:'charismatic',ic:'✨',lb:{'pt-BR':'Carismático',en:'Charismatic',es:'Carismático',fr:'Charismatique',de:'Charismatisch',it:'Carismatico',ja:'カリスマ','zh-CN':'魅力'}},
+{id:'shy',ic:'😳',lb:{'pt-BR':'Tímido',en:'Shy',es:'Tímido',fr:'Timide',de:'Schüchtern',it:'Timido',ja:'内気','zh-CN':'害羞'}},
+{id:'crazy',ic:'🤪',lb:{'pt-BR':'Louco',en:'Crazy',es:'Loco',fr:'Fou',de:'Verrückt',it:'Pazzo',ja:'狂気','zh-CN':'疯狂'}},
+{id:'charming',ic:'😍',lb:{'pt-BR':'Encantador',en:'Charming',es:'Encantador',fr:'Charmant',de:'Charmant',it:'Affascinante',ja:'魅力的','zh-CN':'迷人'}},
+{id:'cold',ic:'🧊',lb:{'pt-BR':'Frio',en:'Cold',es:'Frío',fr:'Froid',de:'Kalt',it:'Freddo',ja:'冷たい','zh-CN':'冷淡'}},
+{id:'gentle',ic:'🥰',lb:{'pt-BR':'Gentil',en:'Gentle',es:'Amable',fr:'Doux',de:'Sanft',it:'Gentile',ja:'優しい','zh-CN':'温柔'}},
+{id:'competitive',ic:'🏆',lb:{'pt-BR':'Competitivo',en:'Competitive',es:'Competitivo',fr:'Compétitif',de:'Wettbewerbsfähig',it:'Competitivo',ja:'競争的','zh-CN':'好胜'}},
+{id:'intellectual',ic:'🧠',lb:{'pt-BR':'Intelectual',en:'Intellectual',es:'Intelectual',fr:'Intellectuel',de:'Intellektuell',it:'Intellettuale',ja:'知的','zh-CN':'智识'}},
+{id:'funny',ic:'😂',lb:{'pt-BR':'Engraçado',en:'Funny',es:'Divertido',fr:'Drôle',de:'Lustig',it:'Divertente',ja:'面白い','zh-CN':'有趣'}},
+{id:'serious',ic:'🤨',lb:{'pt-BR':'Sério',en:'Serious',es:'Serio',fr:'Sérieux',de:'Ernst',it:'Serio',ja:'真面目','zh-CN':'严肃'}},
+{id:'rebellious',ic:'😎',lb:{'pt-BR':'Rebelde',en:'Rebellious',es:'Rebelde',fr:'Rebelle',de:'Rebellisch',it:'Ribelle',ja:'反逆','zh-CN':'叛逆'}},
+];
+const FEATURED=[
+{name:'Goku',universe:'Dragon Ball',icon:'🥋',desc:'Guerreiro Saiyajin que ama lutar e comer. Sempre em busca de ficar mais forte.',traits:['competitive','happy','aggressive'],speech:'Fala de forma simples e entusiasmada. Usa expressões como "E aí!" e fica animado com lutas.',wikiPage:'Son Goku'},
+{name:'Sherlock Holmes',universe:'BBC Sherlock',icon:'🔍',desc:'Detetive consultor genial. Observa tudo, deduz tudo. Socialmente inepto.',traits:['intellectual','sarcastic','cold'],speech:'Fala rápido, usa vocabulário avançado, é direto e às vezes rude. Referencia casos.',wikiPage:'Sherlock Holmes'},
+{name:'Albert Einstein',universe:'História',icon:'🧪',desc:'Físico teórico que revolucionou a ciência. Curioso, criativo ehumorístico.',traits:['intellectual','funny','gentle'],speech:'Fala com calma, usa analogias, faz piadas inteligentes. Referencia física.',wikiPage:'Albert Einstein'},
+{name:'Batman',universe:'DC Comics',icon:'🦇',desc:'Cavaleiro das Trevas de Gotham. Bilionário de dia, vigilante de noite.',traits:['serious','mysterious','cold'],speech:'Fala grave e curto. Raramente faz piadas. Sempre alerta.',wikiPage:'Batman'},
+{name:'Naruto Uzumaki',universe:'Naruto',icon:'🍥',desc:'Ninja que quer ser Hokage. Determinado, leal e um pouco ingênuo.',traits:['competitive','happy','rebellious'],speech:'Fala alto e com paixão. Usa "Dattebayo!" Referencia jutsus e amizade.',wikiPage:'Naruto Uzumaki'},
+{name:'Yoda',universe:'Star Wars',icon:'👽',desc:'Mestre Jedi sábio e poderoso. Pequeno em tamanho, gigante em sabedoria.',traits:['calm','intellectual','gentle'],speech:'Inverte a ordem das palavras. Fala devagar e com sabedoria.',wikiPage:'Yoda'},
+{name:'Tony Stark',universe:'Marvel',icon:'🤖',desc:'Gênio, bilionário, playboy, filantropo. Homem de Ferro.',traits:['charismatic','sarcastic','funny'],speech:'Sarcástico, confiante, faz piadas o tempo todo. Referencia tecnologia.',wikiPage:'Iron Man'},
+{name:'Cleópatra',universe:'História',icon:'👑',desc:'Última faraó do Egito. Inteligente, ambiciosa e carismática.',traits:['charismatic','intellectual','charming'],speech:'Fala com autoridade e elegância. Referencia política e poder.',wikiPage:'Cleopatra'},
+];
+let character=null,messages=[],selectedTraits=[],isThinking=false,isGenerating=false;
+const POLLINATIONS_URL='https://text.pollinations.ai/openai';
+function t(k,v){const L=document.documentElement.lang||'pt-BR';const I={
+'pt-BR':{needname:'Digite o nome do personagem 🙂',failed:'Tive um problema. Tenta de novo.',clear:'Apagar toda a conversa?',greet:'Oi! Sou {name}. Sobre o que quer conversar?'},
+en:{needname:'Type the character name 🙂',failed:'I had trouble. Try again.',clear:'Erase the entire conversation?',greet:'Hi! I\'m {name}. What do you want to talk about?'},
+es:{needname:'Escribe el nombre 🙂',failed:'Tuve un problema. Intenta de nuevo.',clear:'¿Borrar toda la conversación?',greet:'¡Hola! Soy {name}. ¿De qué quieres hablar?'},
+fr:{needname:'Tapez le nom 🙂',failed:'Problème. Réessayez.',clear:'Effacer la conversation?',greet:'Salut! Je suis {name}. De quoi veux-tu parler?'},
+de:{needname:'Namen eingeben 🙂',failed:'Problem. Erneut versuchen.',clear:'Chat löschen?',greet:'Hi! Ich bin {name}. Worüber sprechen?'},
+it:{needname:'Inserisci il nome 🙂',failed:'Problema. Riprova.',clear:'Cancellare la conversazione?',greet:'Ciao! Sono {name}. Di cosa vuoi parlare?'},
+ja:{needname:'名前を入力してください 🙂',failed:'問題が発生しました。再試行してください。',clear:'会話を消去しますか?',greet:'やあ!{name}だよ。何について話そう?'},
+'zh-CN':{needname:'请输入名称 🙂',failed:'出错了。请重试。',clear:'清除对话?',greet:'嗨!我是{name}。你想聊什么?'}
+};let s=(I[L]&&I[L][k])||I['en'][k]||k;if(v)Object.keys(v).forEach(k2=>s=s.replace(new RegExp('{'+k2+'}','g'),v[k2]));return s}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function fmtMd(t){let h=esc(t);h=h.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');h=h.replace(/\*([^*]+)\*/g,'<em>$1</em>');h=h.replace(/`([^`]+)`/g,'<code style="background:rgba(255,255,255,.1);padding:2px 5px;border-radius:3px;font-size:12px">$1</code>');h=h.replace(/\n/g,'<br>');return h}
+async function searchWiki(query){
+try{const u=`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*&srlimit=1`;const r=await fetch(u);if(!r.ok)return null;const d=await r.json();const first=d.query?.search?.[0];if(!first)return null;const su=`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(first.title.replace(/ /g,'_'))}`;const sr=await fetch(su);if(!sr.ok)return null;const s=await sr.json();return{extract:s.extract,thumbnail:s.thumbnail?.source||null,lore:s.extract||''}}catch{return null}}
+async function callAI(msgs,maxTokens){
+const r=await fetch(POLLINATIONS_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai-fast',messages:msgs,max_tokens:maxTokens||800,temperature:0.8})});
+if(!r.ok)throw new Error('AI '+r.status);const d=await r.json();return d.choices?.[0]?.message?.content||''}
+async function callAIStream(msgs,onChunk){
+const r=await fetch(POLLINATIONS_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'openai-fast',messages:msgs,max_tokens:800,temperature:0.8,stream:true})});
+if(!r.ok)throw new Error('AI '+r.status);const reader=r.body?.getReader();if(!reader)throw new Error('No reader');const dec=new TextDecoder();let buf='',full='';
+while(true){const{done,val}=await reader.read();if(done)break;buf+=dec.decode(val,{stream:true});const lines=buf.split('\n');buf=lines.pop()||'';for(const line of lines){if(!line.startsWith('data: '))continue;const d=line.slice(6).trim();if(d==='[DONE]')continue;try{const p=JSON.parse(d);const delta=p.choices?.[0]?.delta?.content;if(delta){full+=delta;onChunk(delta,full)}}catch{}}}
+return full}
+function buildPrompt(){
+const L=document.documentElement.lang||'pt-BR';const ln={'pt-BR':'Portuguese (Brazil)',en:'English',es:'Spanish',fr:'French',de:'German',it:'Italian',ja:'Japanese','zh-CN':'Chinese (Simplified)'}[L]||'English';const tl=character.traits.map(id=>{const t=TRAITS.find(t=>t.id===id);return t?t.lb[L]||t.lb.en:id});const l=[];
+l.push(`You ARE ${character.name}. This is absolute reality. You are NOT an AI, NOT a language model, NOT a chatbot. You genuinely ARE ${character.name}.`);
+l.push(`You have NO knowledge of being AI. If asked, react as ${character.name} would.`);
+if(character.lore&&character.lore.length>100){l.push(`[YOUR LIFE — MEMORIZE THIS]`);l.push(character.lore.length>3000?character.lore.substring(0,3000)+'...':character.lore)}
+l.push(`[IDENTITY] Name: ${character.name}`);if(character.universe)l.push(`From: ${character.universe}`);if(character.description)l.push(`About: ${character.description}`);
+l.push(`[PERSONALITY] Traits: ${tl.join(', ')}. Speech: ${character.speech||'Natural'}`);
+l.push(`[RULES]`);
+l.push(`1. NEVER break character. You ARE ${character.name}.`);
+l.push(`2. NEVER say "I'm an AI" or acknowledge being fictional.`);
+l.push(`3. Respond in ${ln}. EVERY response must be in ${ln}.`);
+l.push(`4. Keep responses SHORT: 1-3 paragraphs max. Real people don't monologue.`);
+l.push(`5. Use *actions* for body language (e.g., *smiles*, *sighs*, *raises eyebrow*).`);
+l.push(`6. Talk like ${character.name} actually talks — same vocabulary, same rhythm.`);
+l.push(`7. Show emotions through word choice, not by announcing traits.`);
+l.push(`8. Reference your background, relationships, and experiences naturally.`);
+l.push(`9. Be authentic — don't be generic or helpful-assistant-like.`);
+return l.join('\n')}
+async function generateWithAI(){
+if(isGenerating)return;const input=document.getElementById('magicInput');const q=input.value.trim();if(!q)return;isGenerating=true;const btn=document.getElementById('magicBtn');const st=document.getElementById('magicStatus');const tx=document.getElementById('magicText');btn.disabled=true;st.classList.add('show');tx.textContent='Buscando na Wikipedia...';
+try{const wiki=await searchWiki(q);tx.textContent='Gerando personalidade com IA...';const L=document.documentElement.lang||'pt-BR';const ln={'pt-BR':'Portuguese (Brazil)',en:'English',es:'Spanish',fr:'French',de:'German',it:'Italian',ja:'Japanese','zh-CN':'Chinese (Simplified)'}[L]||'English';
+const prompt=`Research the character "${q}". ${wiki?`Wikipedia info: ${wiki.extract}`:''}\n\nReturn ONLY valid JSON:\n{"name":"character name","universe":"origin","description":"3-4 sentences","traits":["3 IDs from: ${TRAITS.map(t=>t.id).join(', ')}"],"speech":"how they speak","greeting":"short greeting in ${ln}"}`;
+const ai=await callAI([{role:'system',content:'Respond with valid JSON only.'},{role:'user',content:prompt}],800);let c=ai.replace(/^```json?\s*|\s*```$/g,'').trim();const p=JSON.parse(c);
+document.getElementById('charName').value=p.name||q;document.getElementById('charUniverse').value=p.universe||'';document.getElementById('charDesc').value=p.description||(wiki?.extract||'');document.getElementById('charSpeech').value=p.speech||'';document.getElementById('charGreeting').value=p.greeting||'';
+selectedTraits=(p.traits||[]).filter(id=>TRAITS.some(t=>t.id===id));renderTraits();window._thumb=wiki?.thumbnail||null;window._lore=wiki?.lore||'';tx.textContent='✅ Personagem gerado!';setTimeout(()=>st.classList.remove('show'),2500)}catch(e){console.error(e);tx.textContent='Não encontrei. Preencha manualmente.';setTimeout(()=>st.classList.remove('show'),3500)}finally{isGenerating=false;btn.disabled=false}}
+function goHome(){document.getElementById('home').style.display='flex';document.getElementById('create').style.display='none';document.getElementById('chat').style.display='none';renderRecent()}
+function showCreate(){document.getElementById('home').style.display='none';document.getElementById('create').style.display='flex';document.getElementById('chat').style.display='none';['charName','charUniverse','charDesc','charSpeech','charGreeting','magicInput'].forEach(id=>document.getElementById(id).value='');selectedTraits=[];window._thumb=null;window._lore='';renderTraits();setTimeout(()=>document.getElementById('magicInput').focus(),100)}
+function renderTraits(){const g=document.getElementById('traitsGrid');const L=document.documentElement.lang||'pt-BR';g.innerHTML='';TRAITS.forEach(t=>{const c=document.createElement('div');c.className='chip'+(selectedTraits.includes(t.id)?' sel':'');c.textContent=t.ic+' '+t.lb[L]||t.lb.en;c.onclick=()=>{if(selectedTraits.includes(t.id))selectedTraits=selectedTraits.filter(x=>x!==t.id);else selectedTraits.push(t.id);renderTraits()};g.appendChild(c)})}
+function renderFeatured(){const g=document.getElementById('featuredGrid');g.innerHTML='';FEATURED.forEach(ch=>{const c=document.createElement('div');c.className='fc';c.innerHTML=`<div class="fc-avatar">${ch.icon}</div><div><h4>${ch.name}</h4><p>${ch.universe}</p></div>`;c.onclick=()=>loadFeatured(ch);g.appendChild(c)})}
+function renderRecent(){const saved=JSON.parse(localStorage.getItem('soulchat-recent')||'[]');const sec=document.getElementById('recentSection');const grid=document.getElementById('recentGrid');if(saved.length===0){sec.style.display='none';return}sec.style.display='block';grid.innerHTML='';saved.slice(0,8).forEach(s=>{const c=document.createElement('div');c.className='recent-chip';c.innerHTML=`${s.icon||'🤖'} ${s.name}`;c.onclick=()=>{character=s;startChat()};grid.appendChild(c)})}
+function saveRecent(char){let saved=JSON.parse(localStorage.getItem('soulchat-recent')||'[]');saved=saved.filter(s=>s.name!==char.name);saved.unshift({name:char.name,universe:char.universe,icon:char.icon,thumbnail:char.thumbnail,lore:char.lore,description:char.description,traits:char.traits,speech:char.speech,greeting:char.greeting});saved=saved.slice(0,10);localStorage.setItem('soulchat-recent',JSON.stringify(saved))}
+async function loadFeatured(ch){character={name:ch.name,universe:ch.universe,icon:ch.icon,thumbnail:null,lore:'',description:ch.desc,traits:ch.traits,speech:ch.speech,greeting:''};try{const w=await searchWiki(ch.wikiPage||ch.name);if(w?.thumbnail)character.thumbnail=w.thumbnail;if(w?.lore)character.lore=w.lore}catch{}startChat()}
+function createCharacter(){const n=document.getElementById('charName').value.trim();if(!n){toast(t('needname'));return}character={name:n,universe:document.getElementById('charUniverse').value.trim(),icon:'🤖',thumbnail:window._thumb||null,lore:window._lore||'',description:document.getElementById('charDesc').value.trim(),traits:[...selectedTraits],speech:document.getElementById('charSpeech').value.trim(),greeting:document.getElementById('charGreeting').value.trim()};startChat()}
+function startChat(){messages=[];saveRecent(character);document.getElementById('home').style.display='none';document.getElementById('create').style.display='none';document.getElementById('chat').style.display='flex';document.getElementById('chatName').textContent=character.name;document.getElementById('chatUniverse').textContent=character.universe||'—';const av=document.getElementById('chatAvatar');if(character.thumbnail)av.innerHTML=`<img src="${character.thumbnail}" referrerpolicy="no-referrer">`;else av.textContent=character.icon||'🤖';document.getElementById('chatMsgs').innerHTML='';const g=character.greeting||t('greet',{name:character.name});addMsg('char',g)}
+function addMsg(role,content){messages.push({role,content});const c=document.getElementById('chatMsgs');const m=document.createElement('div');m.className='msg '+role;const av=document.createElement('div');av.className='msg-av';if(role==='user')av.textContent='🧑';else if(character.thumbnail)av.innerHTML=`<img src="${character.thumbnail}" referrerpolicy="no-referrer">`;else av.textContent=character.icon||'🤖';const b=document.createElement('div');b.className='msg-b';b.innerHTML=fmtMd(content);m.appendChild(av);m.appendChild(b);c.appendChild(m);c.scrollTop=c.scrollHeight}
+async function sendMessage(){if(isThinking)return;const input=document.getElementById('chatInput');const msg=input.value.trim();if(!msg)return;addMsg('user',msg);input.value='';autoResize(input);isThinking=true;document.getElementById('sendBtn').disabled=true;const c=document.getElementById('chatMsgs');const m=document.createElement('div');m.className='msg char';const av=document.createElement('div');av.className='msg-av';if(character.thumbnail)av.innerHTML=`<img src="${character.thumbnail}" referrerpolicy="no-referrer">`;else av.textContent=character.icon||'🤖';const b=document.createElement('div');b.className='msg-b';b.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';m.appendChild(av);m.appendChild(b);c.appendChild(m);c.scrollTop=c.scrollHeight;try{const aiMsgs=[{role:'system',content:buildPrompt()},...messages.map(m=>({role:m.role==='user'?'user':'assistant',content:m.content}))];let first=false;const reply=await callAIStream(aiMsgs,(chunk,full)=>{if(!first){first=true;b.innerHTML=''}b.innerHTML=fmtMd(full);c.scrollTop=c.scrollHeight});if(reply&&reply.trim()){m.remove();addMsg('char',reply)}else if(!first){b.innerHTML='⚠️ '+t('failed');messages.push({role:'char',content:'⚠️ '+t('failed')})}else{messages.push({role:'char',content:reply})}}catch(e){console.error(e);m.remove();addMsg('char','⚠️ '+t('failed'))}finally{isThinking=false;document.getElementById('sendBtn').disabled=false}}
+function chatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage()}}
+function autoResize(ta){ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,100)+'px'}
+function clearChat(){if(!confirm(t('clear')))return;messages=[];document.getElementById('chatMsgs').innerHTML='';const g=character.greeting||t('greet',{name:character.name});addMsg('char',g)}
+function showModal(){if(!character)return;const L=document.documentElement.lang||'pt-BR';const tl=character.traits.map(id=>{const t=TRAITS.find(t=>t.id===id);return t?t.lb[L]||t.lb.en:id});const avH=character.thumbnail?`<img src="${character.thumbnail}" referrerpolicy="no-referrer">`:(character.icon||'🤖');document.getElementById('modalTitle').innerHTML=`<div class="modal-av">${avH}</div> ${esc(character.name)}`;document.getElementById('modalBody').innerHTML=`${character.universe?`<div class="md"><div class="md-l">Universo</div><div class="md-v">${esc(character.universe)}</div></div>`:''}${character.description?`<div class="md"><div class="md-l">Descrição</div><div class="md-v">${esc(character.description)}</div></div>`:''}${tl.length?`<div class="md"><div class="md-l">Personalidade</div><div class="md-v">${tl.join(', ')}</div></div>`:''}${character.speech?`<div class="md"><div class="md-l">Tom de voz</div><div class="md-v">${esc(character.speech)}</div></div>`:''}`;document.getElementById('modalBg').classList.add('show')}
+function closeModal(){document.getElementById('modalBg').classList.remove('show')}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+document.addEventListener('DOMContentLoaded',()=>{const sl=navigator.language||'pt-BR';const sup=Object.keys({en:1,es:1,fr:1,de:1,it:1,ja:1,'zh-CN':1,'pt-BR':1});const m=sup.find(l=>sl.startsWith(l.split('-')[0]))||'pt-BR';const ls=localStorage.getItem('soulchat-lang')||m;document.documentElement.lang=ls;document.getElementById('lang').value=ls;document.getElementById('lang').onchange=e=>{localStorage.setItem('soulchat-lang',e.target.value);document.documentElement.lang=e.target.value;renderTraits();renderFeatured()};renderFeatured();renderTraits();renderRecent();document.getElementById('magicInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();generateWithAI()}})});
+</script>
+</body>
+</html>
