@@ -195,6 +195,7 @@ footer a{color:var(--accent);text-decoration:none}
 <div><h3 id="cna">—</h3><p id="cun">—</p></div>
 </div>
 <div style="display:flex;gap:4px">
+<button class="btn" onclick="showApiKey()" style="padding:6px;font-size:11px" title="Configurar API key">🔑</button>
 <button class="btn" onclick="clearChat()" style="padding:6px;font-size:11px">🗑️</button>
 <button class="btn" onclick="goHome()" style="padding:6px;font-size:11px">←</button>
 </div>
@@ -271,7 +272,19 @@ async function searchWiki(query){
 }
 
 async function callAI(msgs){
-  // Try POST first
+  // If user has OpenRouter key, use it (reliable)
+  const key = localStorage.getItem('soulchat-api-key');
+  if(key){
+    const r = await fetch('https://openrouter.ai/api/v1/chat/completions',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json','HTTP-Referer':location.origin,'X-Title':'SoulChat'},
+      body:JSON.stringify({model:'openai/gpt-oss-20b:free',messages:msgs})
+    });
+    if(!r.ok) throw new Error('OpenRouter '+r.status);
+    const d = await r.json();
+    return d.choices?.[0]?.message?.content || '';
+  }
+  // Fallback: Pollinations (free, may rate limit)
   try {
     const r = await fetch('https://text.pollinations.ai/openai',{
       method:'POST',
@@ -283,11 +296,7 @@ async function callAI(msgs){
       return d.choices?.[0]?.message?.content || '';
     }
   } catch(e){}
-  // Fallback: GET endpoint with combined prompt
-  const combined = msgs.map(m=>m.role+': '+m.content).join('\n\n');
-  const r2 = await fetch('https://text.pollinations.ai/'+encodeURIComponent(combined));
-  if(!r2.ok) throw new Error('AI '+r2.status);
-  return await r2.text();
+  throw new Error('IA indisponível (402). Adicione sua chave OpenRouter gratuita nas configurações.');
 }
 
 // === System Prompt ===
@@ -621,6 +630,15 @@ function showModal(){
   document.getElementById('mbg').classList.add('show');
 }
 function closeModal(){document.getElementById('mbg').classList.remove('show')}
+function showApiKey(){
+  const current = localStorage.getItem('soulchat-api-key') || '';
+  const key = prompt('Cole sua chave da OpenRouter (grátis em openrouter.ai/keys):\\n\\nDeixe vazio para usar Pollinations (pode ter rate limit).', current);
+  if(key !== null){
+    if(key.trim()) localStorage.setItem('soulchat-api-key', key.trim());
+    else localStorage.removeItem('soulchat-api-key');
+    toast(key.trim() ? '✅ Chave salva!' : 'Chave removida. Usando Pollinations.');
+  }
+}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
 
 // === Init ===
