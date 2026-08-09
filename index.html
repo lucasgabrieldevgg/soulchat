@@ -274,7 +274,7 @@ async function callAI(msgs){
   const r = await fetch('https://text.pollinations.ai/openai',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({messages:msgs,max_tokens:800,temperature:0.8})
+    body:JSON.stringify({messages:msgs})
   });
   if(!r.ok) throw new Error('AI '+r.status);
   const d = await r.json();
