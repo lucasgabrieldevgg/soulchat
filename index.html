@@ -333,46 +333,66 @@ async function gen(){
   const tx = document.getElementById('mst');
   btn.disabled = true;
   st.classList.add('show');
-  tx.textContent = 'Buscando na Wikipedia...';
+  tx.textContent = '🔍 Buscando na Wikipedia...';
   
   try{
+    // Step 1: Search Wikipedia (reliable)
     const wiki = await searchWiki(q);
-    tx.textContent = 'Gerando personalidade com IA...';
     
-    const L = document.documentElement.lang || 'pt-BR';
-    const ln = {'pt-BR':'Portuguese (Brazil)',en:'English',es:'Spanish',fr:'French',de:'German',it:'Italian',ja:'Japanese','zh-CN':'Chinese (Simplified)'}[L]||'English';
+    // Fill in what we have from Wikipedia
+    document.getElementById('cn').value = q;
+    if(wiki){
+      document.getElementById('cd').value = wiki.extract || '';
+      window._thumb = wiki.thumbnail || null;
+      window._lore = wiki.lore || '';
+    } else {
+      window._thumb = null;
+      window._lore = '';
+    }
     
-    const prompt = `Research the character "${q}". ${wiki ? 'Wikipedia info: '+wiki.extract : ''}
+    // Step 2: Try AI for personality (optional - don't fail if it doesn't work)
+    tx.textContent = '🧠 Gerando personalidade com IA...';
+    try {
+      const L = document.documentElement.lang || 'pt-BR';
+      const ln = {'pt-BR':'Portuguese (Brazil)',en:'English',es:'Spanish',fr:'French',de:'German',it:'Italian',ja:'Japanese','zh-CN':'Chinese (Simplified)'}[L]||'English';
+      
+      const prompt = `Character: "${q}". ${wiki ? 'Info: '+wiki.extract : ''}
 
-Return ONLY valid JSON (no markdown, no backticks):
-{"name":"character name","universe":"origin","description":"3-4 sentences about who they are","traits":["3 IDs from: ${TRAITS.map(t=>t.id).join(', ')}"],"speech":"how they speak (1 sentence)","greeting":"short greeting in character, in ${ln}"}`;
+Return ONLY JSON:
+{"name":"name","universe":"origin","description":"3 sentences","traits":["3 from: ${TRAITS.map(t=>t.id).join(',')}"],"speech":"how they speak","greeting":"short greeting in ${ln}"}`;
+      
+      const ai = await callAI([
+        {role:'system',content:'Return valid JSON only.'},
+        {role:'user',content:prompt}
+      ]);
+      
+      let c = ai.replace(/^```json?\s*|\s*```$/g,'').trim();
+      const p = JSON.parse(c);
+      
+      // Override with AI results (better than Wikipedia alone)
+      document.getElementById('cn').value = p.name || q;
+      document.getElementById('cu').value = p.universe || '';
+      if(p.description) document.getElementById('cd').value = p.description;
+      document.getElementById('cs').value = p.speech || '';
+      document.getElementById('cg').value = p.greeting || '';
+      selTraits = (p.traits || []).filter(id => TRAITS.some(t => t.id === id));
+      renderTraits();
+      
+      tx.textContent = '✅ Personagem gerado!';
+    } catch(aiErr) {
+      // AI failed but Wikipedia worked — still good!
+      if(wiki){
+        tx.textContent = '✅ Encontrado na Wikipedia! Personalidade manual abaixo.';
+      } else {
+        tx.textContent = '⚠️ Não encontrei. Preencha manualmente.';
+      }
+    }
     
-    const ai = await callAI([
-      {role:'system',content:'Respond with valid JSON only. No markdown.'},
-      {role:'user',content:prompt}
-    ]);
-    
-    let c = ai.replace(/^```json?\s*|\s*```$/g,'').trim();
-    const p = JSON.parse(c);
-    
-    document.getElementById('cn').value = p.name || q;
-    document.getElementById('cu').value = p.universe || '';
-    document.getElementById('cd').value = p.description || (wiki?.extract || '');
-    document.getElementById('cs').value = p.speech || '';
-    document.getElementById('cg').value = p.greeting || '';
-    
-    selTraits = (p.traits || []).filter(id => TRAITS.some(t => t.id === id));
-    renderTraits();
-    
-    window._thumb = wiki?.thumbnail || null;
-    window._lore = wiki?.lore || '';
-    
-    tx.textContent = '✅ Personagem gerado!';
-    setTimeout(() => st.classList.remove('show'), 2500);
+    setTimeout(() => st.classList.remove('show'), 3000);
   }catch(e){
     console.error('Gen error:', e);
-    tx.textContent = 'Não encontrei. Preencha manualmente ou tente outro nome.';
-    setTimeout(() => st.classList.remove('show'), 3500);
+    tx.textContent = '⚠️ Erro. Preencha manualmente.';
+    setTimeout(() => st.classList.remove('show'), 3000);
   }finally{
     isGen = false;
     btn.disabled = false;
