@@ -1,58 +1,39 @@
 # SoulChat
 
-> Chat with any AI character. Type a name, the AI researches it on Wikipedia and automatically generates the personality, voice and backstory.
-
-**Live demo:** https://lucasgabrieldevgg.github.io/soulchat/
-
-## ✨ Features
-
-- 🪄 **Automatic generation** — type a name, the AI researches Wikipedia and creates personality, voice and story
-- 💬 **Real-time AI chat** with the generated character
-- 🎭 **8 suggested characters** — Goku, Sherlock, Einstein, Batman, Naruto, Yoda, Tony Stark, Cleopatra
-- 🧠 **16 personality traits** to shape how the character behaves
-- 🌍 **8 languages** — EN, PT-BR, ES, FR, DE, IT, JA, ZH-CN
-- 💾 **Recents** saved in localStorage
-- 🔍 **Wikipedia search** (PT first)
-- 🎨 **Green/cyan dark theme**, responsive, 100% in the browser — no backend
-
----
-
-# 🇧🇷 Português (original)
-
-# SoulChat
-
-> Converse com qualquer personagem de IA. A IA pesquisa na Wikipedia e dá vida ao personagem automaticamente.
+> Chat with any AI character. The AI researches it on Wikipedia and brings the character to life automatically.
 
 **Demo:** https://lucasgabrieldevgg.github.io/soulchat/
 
+[Leia em Português](README.pt-BR.md)
+
 ## ✨ Features
 
-- 🪄 **Geração automática** — digite o nome, a IA pesquisa na Wikipedia e cria personalidade, voz e história
-- 💬 **Chat com IA** — converse com o personagem em tempo real
-- 🎭 **8 personagens sugeridos** — Goku, Sherlock, Einstein, Batman, Naruto, Yoda, Tony Stark, Cleópatra
-- 🧠 **16 traços de personalidade** — selecione como o personagem se comporta
-- 🌍 **8 idiomas** — PT-BR, EN, ES, FR, DE, IT, JA, ZH-CN
-- 💾 **Recentes** — personagens salvos no localStorage
-- 🔍 **Wikipedia em português** — busca na Wikipedia PT primeiro
-- 🎨 **Dark theme verde/ciano** — design limpo e minimalista
-- 📱 **Responsivo** — funciona em mobile e desktop
-- 🔒 **100% no navegador** — sem backend, sem servidor
+- 🪄 **Automatic generation** — type a name, the AI researches Wikipedia and creates the personality, voice and backstory
+- 💬 **Real-time AI chat** with the character
+- 🎭 **8 suggested characters** — Goku, Sherlock, Einstein, Batman, Naruto, Yoda, Tony Stark, Cleopatra
+- 🧠 **16 personality traits** — choose how the character behaves
+- 🌍 **8 languages** — EN, PT-BR, ES, FR, DE, IT, JA, ZH-CN
+- 💾 **Recents** — characters saved in localStorage
+- 🔍 **Wikipedia search** (PT first)
+- 🎨 **Green/cyan dark theme** — clean, minimal design
+- 📱 **Responsive** — works on mobile and desktop
+- 🔒 **100% in the browser** — no backend, no server
 
-## 🚀 Como usar
+## 🚀 How to use
 
-1. Acesse a [demo](https://lucasgabrieldevgg.github.io/soulchat/) ou abra `index.html`
-2. Digite o nome de um personagem (ex: "Goku") e clique em "Gerar"
-3. A IA pesquisa na Wikipedia e preenche tudo automaticamente
-4. Clique em "Iniciar conversa" e converse!
+1. Open the [demo](https://lucasgabrieldevgg.github.io/soulchat/) or `index.html`
+2. Type a character name (e.g. "Goku") and click "Generate"
+3. The AI researches Wikipedia and fills everything in automatically
+4. Click "Start conversation" and chat!
 
-## 🛠️ Tecnologias
+## 🛠️ Technologies
 
-- HTML + CSS + JavaScript puro (zero dependências)
-- [Pollinations AI](https://pollinations.ai) — API gratuita compatível com OpenAI
-- [Wikipedia REST API](https://pt.wikipedia.org/api/rest_v1/) — busca de informações
-- localStorage para recentes
-- Single file — um `index.html` faz tudo
+- Plain HTML + CSS + JavaScript (zero dependencies)
+- [Pollinations AI](https://pollinations.ai) — free OpenAI-compatible API
+- [Wikipedia REST API](https://pt.wikipedia.org/api/rest_v1/) — information lookup
+- localStorage for recents
+- Single file — one `index.html` does everything
 
-## 📄 Licença
+## 📄 License
 
 MIT
