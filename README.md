@@ -1,5 +1,26 @@
 # SoulChat
 
+> Chat with any AI character. Type a name, the AI researches it on Wikipedia and automatically generates the personality, voice and backstory.
+
+**Live demo:** https://lucasgabrieldevgg.github.io/soulchat/
+
+## ✨ Features
+
+- 🪄 **Automatic generation** — type a name, the AI researches Wikipedia and creates personality, voice and story
+- 💬 **Real-time AI chat** with the generated character
+- 🎭 **8 suggested characters** — Goku, Sherlock, Einstein, Batman, Naruto, Yoda, Tony Stark, Cleopatra
+- 🧠 **16 personality traits** to shape how the character behaves
+- 🌍 **8 languages** — EN, PT-BR, ES, FR, DE, IT, JA, ZH-CN
+- 💾 **Recents** saved in localStorage
+- 🔍 **Wikipedia search** (PT first)
+- 🎨 **Green/cyan dark theme**, responsive, 100% in the browser — no backend
+
+---
+
+# 🇧🇷 Português (original)
+
+# SoulChat
+
 > Converse com qualquer personagem de IA. A IA pesquisa na Wikipedia e dá vida ao personagem automaticamente.
 
 **Demo:** https://lucasgabrieldevgg.github.io/soulchat/
