@@ -913,7 +913,7 @@ function systemPrompt(){
 - Mantenha consistência absoluta com o RESUMO MESTRE, a MEMÓRIA, a PESQUISA RECENTE e tudo que já aconteceu.
 - Interprete os códigos do usuário: *texto* = ação dele; "fala" = fala dele; (OOC: …) = instrução do AUTOR — obedeça sem narrar como parte da história.
 - TOM e RITMO podem mudar no meio via códigos: adapte-se imediatamente.
-- Ao fim de CADA narração, exceto quando o usuário mandar !continuar ou !fim, acrescente um bloco de escolhas: 3 a 4 linhas, cada uma no formato exato:
+- Ofereça o bloco de escolhas somente quando a história JÁ ESTIVER acontecendo (nunca na apresentação): 3 a 4 linhas, cada uma no formato exato:
 ▸ Título da opção | Prós: consequência boa | Contras: custo/risco
 As escolhas devem ser caminhos genuinamente diferentes, com trade-offs reais.`);
   if(PSET.auto)
@@ -1217,9 +1217,10 @@ async function iniciar(modo,dados){
   H=Object.assign({id:'h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),modo,universo:'',premissa:'',tom:'equilibrado',ritmo:'equilibrado',ficha:'',memory:[],
     turnos:[],pesquisa:[],plog:[],chatlog:'',chatlogAt:0,mods:[],modsCustom:[]},dados);
   syncBiblio(); salvar(); ver('v-hist'); render();
+  /* personagem se apresenta e devolve a palavra; história/conversa começa pela PESSOA */
   const abertura=(modo==='personagem')
-    ?'ABERTURA (in medias res): comece NO MEIO de uma cena do cotidiano do personagem, com algo acontecendo AGORA ao redor dele. No máximo 2 parágrafos curtos. NÃO apresente nem biografe o personagem, NÃO resuma a ficha. IMPORTANTE: a cena é dos NPCs e do mundo — eles agem e falam COM o personagem do usuário, mas NUNCA narre ação, fala, pensamento ou decisão DELE (nem "você diz/faz/sente/decide"). Pode situar onde ele está ("você está no cockpit quando o alarme dispara"), mas o que ele faz é com o usuário. Termine com um gancho aberto que convide o usuário a agir, e o bloco de escolhas.'
-    :'ABERTURA (in medias res): mergulhe direto numa cena com algo acontecendo AGORA ao redor do personagem do usuário. No máximo 2 parágrafos curtos — cenário pelos sentidos e pelo conflito, sem exposição. NPCs agem e falam; NUNCA narre ação, fala ou decisão do personagem do usuário. Termine com um gancho aberto e o bloco de escolhas.';
+    ?'PRIMEIRA MENSAGEM — apresentação: fale COMO o personagem, em 1ª pessoa, no máximo 2 parágrafos curtos. Se apresente de forma natural e no estilo dele (quem é, de onde vem, clima), SEM recitar a ficha em lista e SEM biografia longa. Termine com uma pergunta ou provocação convidando a pessoa a começar. NÃO crie cena, NÃO descreva cenário, NÃO invente alarme/acontecimento: a história começa quando a PESSOA mandar a primeira mensagem. NUNCA escreva ações ou falas dela.'
+    :'PRIMEIRA MENSAGEM — apresentação do narrador: em no máximo 2 parágrafos curtos, apresente-se como NARRADOR da história que vai ser criada JUNTO, diga o clima do cenário em 1-2 frases e convide a pessoa a começar do jeito que ela quiser (uma ação entre *asteriscos*, uma fala entre "aspas" ou de qualquer jeito). NÃO crie cena, NÃO descreva cenário em detalhes, NÃO invente acontecimentos: a história começa quando a PESSOA mandar a primeira mensagem.';
   await narrar(abertura,false);
 }
 $('#n-go').onclick=async()=>{
