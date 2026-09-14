@@ -161,6 +161,20 @@
   .mini{font-size:12px;border:1px solid var(--line);border-radius:9px;padding:6px 11px;font-weight:600}
   .mini:hover{border-color:rgba(167,139,250,.5)}
 
+  /* ─── biblioteca ─── */
+  .bsec{margin-top:26px}
+  .bsec h2{font-family:var(--serif);font-size:17px;margin:0 0 4px}
+  .biblio{display:flex;flex-direction:column;gap:9px}
+  .bcard{display:flex;gap:12px;align-items:center;background:linear-gradient(180deg,var(--bg2),var(--bg3));
+    border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;transition:.15s}
+  .bcard:hover{border-color:rgba(139,92,246,.55);transform:translateX(3px)}
+  .bfoto{width:46px;height:46px;border-radius:11px;object-fit:cover;border:1px solid var(--line);flex-shrink:0;background:var(--bg3)}
+  .bnone{display:flex;align-items:center;justify-content:center;font-size:20px}
+  .binfo{flex:1;min-width:0}
+  .bt{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bs{font-size:12px;color:var(--muted);margin-top:2px}
+  .bacts{display:flex;gap:6px;flex-shrink:0}
+
   #toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(8px);background:#1a1730;color:#fff;
     padding:10px 18px;border-radius:999px;font-size:13.5px;font-weight:500;z-index:99;opacity:0;transition:.25s;
     pointer-events:none;box-shadow:var(--shadow);border:1px solid var(--line);max-width:88vw;text-align:center}
@@ -178,6 +192,7 @@
 <header>
   <div class="brand"><span class="soulmark">✦</span> <span>SoulChat</span> <small>· narração viva, você interfere</small></div>
   <div class="hbtns">
+    <button id="b-home" class="hbtn" title="Tela inicial — suas histórias" aria-label="Início">🏠</button>
     <button id="b-voz" class="hbtn" title="Narrar em voz alta" aria-label="Voz">🔊</button>
     <button id="b-mods" class="hbtn" title="Modificadores — ligue/desligue estilos durante a conversa" aria-label="Modificadores">⚡</button>
     <button id="b-pesq" class="hbtn" title="Gerenciador de pesquisa (Wikipédia + Wikidata, qualquer idioma)" aria-label="Pesquisa">🔍</button>
@@ -206,6 +221,11 @@
       <h3>Com personagem</h3>
       <p>Ficha do personagem — preencha do zero ou deixe a IA pesquisar e preencher pra você.</p>
     </div>
+  </div>
+  <div id="biblio-wrap" class="bsec" hidden>
+    <h2>📚 Suas histórias</h2>
+    <p class="hint" style="margin:0 0 10px">Ficam salvas neste navegador até você excluir. ▶ abrir · ✏️ editar dados · 🗑️ excluir.</p>
+    <div id="biblio" class="biblio"></div>
   </div>
 </main>
 
@@ -540,6 +560,109 @@ function repintaMods(){ document.querySelectorAll('.modchips').forEach(pintaMods
 function instrucoesMods(){
   const ativos=new Set(modsAtivosIds());
   return todosMods().filter(m=>ativos.has(m.id)).map(m=>m.i);
+}
+
+/* ============ BIBLIOTECA 📚 (todas as histórias, salvas no navegador) ============ */
+let editandoId=null;
+function biblio(){ return store.getJ('ch_biblio')||[]; }
+function setBiblio(b){ store.set('ch_biblio',JSON.stringify(b)); }
+function extraiFoto(f){ const m=(f||'').match(/Foto:\s*(\S+)/); return m?m[1]:''; }
+function tituloDe(hh){ const nome=(hh.ficha||'').split('\n').map(s=>s.replace(/^Nome:\s*/i,'').trim()).find(s=>s.length>1)||'';
+  if(hh.modo==='personagem') return nome||hh.universo||'Sem título';
+  return (hh.universo||'').trim()||nome||'Sem título'; }
+function syncBiblio(hh){ hh=hh||H; if(!hh) return;
+  if(!hh.id) hh.id='h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const b=biblio(); const i=b.findIndex(x=>x.id===hh.id);
+  const reg={id:hh.id,titulo:tituloDe(hh),modo:hh.modo,ficha:hh.ficha||'',universo:hh.universo||'',premissa:hh.premissa||'',tom:hh.tom,ritmo:hh.ritmo,extra:hh.extra||'',foto:extraiFoto(hh.ficha),n:(hh.turnos||[]).length,atualizado:Date.now(),dados:hh};
+  if(i>=0) b[i]=reg; else b.unshift(reg);
+  if(b.length>30) b.length=30;
+  setBiblio(b);
+}
+function renderBiblio(){
+  const wrap=$('#biblio-wrap'), el=$('#biblio'); if(!wrap||!el) return;
+  const b=biblio();
+  wrap.hidden=!b.length;
+  el.innerHTML=b.map(r=>{
+    const d=new Date(r.atualizado);
+    const dt=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="bcard" data-id="${r.id}">
+      ${r.foto?`<img class="bfoto" src="${esc(r.foto)}" alt="">`:'<div class="bfoto bnone">'+(r.modo==='personagem'?'🎭':'📖')+'</div>'}
+      <div class="binfo"><div class="bt">${esc(r.titulo)}</div>
+      <div class="bs">${r.modo==='personagem'?'🎭 personagem':'📖 história'} · ${r.n} turnos · ${dt}</div></div>
+      <div class="bacts">
+        <button class="mini" data-a="abrir" title="abrir">▶</button>
+        <button class="mini" data-a="editar" title="editar dados">✏️</button>
+        <button class="mini" data-a="excluir" title="excluir">🗑️</button>
+      </div></div>`;
+  }).join('');
+  el.querySelectorAll('.bcard').forEach(c=>{
+    const id=c.dataset.id;
+    c.onclick=e=>{ if(e.target.closest('button')) return; abrirHist(id); };
+    c.querySelector('[data-a=abrir]').onclick=()=>abrirHist(id);
+    c.querySelector('[data-a=editar]').onclick=()=>editarHist(id);
+    c.querySelector('[data-a=excluir]').onclick=()=>excluirHist(id);
+  });
+}
+function abrirHist(id){
+  syncBiblio();
+  const r=biblio().find(x=>x.id===id); if(!r) return;
+  H=Object.assign({modo:'nova',universo:'',premissa:'',tom:'equilibrado',ritmo:'equilibrado',ficha:'',memory:[],turnos:[],pesquisa:[],plog:[],chatlog:'',chatlogAt:0,mods:[],modsCustom:[]},r.dados);
+  H.id=id; salvar(); ver('v-hist'); render(); toast('📚 "'+r.titulo+'" aberta');
+}
+function parseFicha(txt){
+  const o={nome:'',origem:'',apar:'',pers:'',hist:'',hab:'',obj:'',extra:'',foto:''};
+  (txt||'').split('\n').forEach(l=>{
+    const m=l.match(/^(Nome|Origem\/universo|Aparência|Personalidade|História|Habilidades|Objetivo|Extra|Foto):\s*(.*)$/i); if(!m) return;
+    const k=m[1].toLowerCase(), v=m[2].trim();
+    if(k.indexOf('nome')===0) o.nome=v; else if(k.indexOf('origem')===0) o.origem=v;
+    else if(k.indexOf('apar')===0) o.apar=v; else if(k.indexOf('pers')===0) o.pers=v;
+    else if(k.indexOf('hist')===0) o.hist=v; else if(k.indexOf('hab')===0) o.hab=v;
+    else if(k.indexOf('obj')===0) o.obj=v; else if(k.indexOf('extra')===0) o.extra=v;
+    else if(k.indexOf('foto')===0) o.foto=v;
+  });
+  return o;
+}
+function editarHist(id){
+  syncBiblio();
+  const r=biblio().find(x=>x.id===id); if(!r) return;
+  editandoId=id;
+  MODS_TEMP.length=0; (r.dados.mods||[]).forEach(m=>MODS_TEMP.push(m));
+  MODS_CT_TEMP.length=0; (r.dados.modsCustom||[]).forEach(m=>MODS_CT_TEMP.push(m));
+  if(r.modo==='personagem'){
+    const f=parseFicha(r.ficha);
+    $('#q-nome').value=f.nome; $('#q-origem').value=f.origem; $('#q-foto').value=f.foto; pintaPreviewFoto();
+    $('#q-apar').value=f.apar; $('#q-pers').value=f.pers; $('#q-hist').value=f.hist; $('#q-hab').value=f.hab;
+    $('#q-obj').value=f.obj; $('#q-extra').value=f.extra;
+    $('#p-ficha').value=''; $('#p-uni').value=r.universo; $('#p-pre').value=r.premissa;
+    repintaMods(); ver('v-per');
+  } else {
+    $('#f-uni').value=r.universo; $('#f-per').value=(r.extra||'').replace(/^O USUÁRIO INTERPRETA:\s*/i,'');
+    $('#f-pre').value=r.premissa; $('#f-tom').value=r.tom||'equilibrado'; $('#f-rit').value=r.ritmo||'equilibrado';
+    repintaMods(); ver('v-nova');
+  }
+  toast('✏️ editando "'+r.titulo+'" — os turnos são preservados');
+}
+function excluirHist(id){
+  const r=biblio().find(x=>x.id===id); if(!r) return;
+  if(!confirm('Excluir "'+r.titulo+'" pra sempre? (os turnos vão junto)')) return;
+  setBiblio(biblio().filter(x=>x.id!==id));
+  if(H&&H.id===id){ H=null; localStorage.removeItem('ch_historia'); }
+  renderBiblio(); toast('🗑️ excluída');
+}
+function salvaEdicao(campos){
+  const b=biblio();
+  const r=b.find(x=>x.id===editandoId);
+  if(!r){ editandoId=null; return false; }
+  const d=r.dados;
+  Object.assign(d,campos);
+  d.mods=MODS_TEMP.slice(); d.modsCustom=MODS_CT_TEMP.slice();
+  r.titulo=tituloDe(d); r.ficha=d.ficha||''; r.universo=d.universo||''; r.premissa=d.premissa||'';
+  r.tom=d.tom; r.ritmo=d.ritmo; r.extra=d.extra||''; r.foto=extraiFoto(d.ficha); r.atualizado=Date.now();
+  setBiblio(b);
+  H=d; H.id=r.id; salvar();
+  editandoId=null; MODS_TEMP.length=0; MODS_CT_TEMP.length=0;
+  ver('v-hist'); render(); toast('✏️ informações atualizadas');
+  return true;
 }
 
 /* ============ CACHE de pesquisa (localStorage, TTL 7 dias) ============ */
@@ -1075,18 +1198,22 @@ $('#b-export').onclick=exportar;
 
 /* ============ navegação ============ */
 function ver(id){ for(const v of['v-home','v-nova','v-per','v-hist']) $('#'+v).hidden=(v!==id);
+  if(id==='v-home') renderBiblio();
   $('#composer').hidden=(id!=='v-hist'); }
-function novaHistoria(){ localStorage.removeItem('ch_historia'); H=null; MODS_TEMP.length=0; MODS_CT_TEMP.length=0; ver('v-home'); }
-$('#b-nova').onclick=()=>{ if(H&&H.turnos&&H.turnos.length&&!confirm('Começar uma nova história? A atual é perdida (exporte com ⬇️ se quiser guardar).')) return; novaHistoria(); };
-$('#m-nova').onclick=()=>{ repintaMods(); ver('v-nova'); };
-$('#m-personagem').onclick=()=>{ repintaMods(); ver('v-per'); };
+function novaHistoria(){ syncBiblio(); MODS_TEMP.length=0; MODS_CT_TEMP.length=0; editandoId=null; ver('v-home'); }
+$('#b-nova').onclick=()=>novaHistoria();
+$('#b-home').onclick=()=>novaHistoria();
+$('#m-nova').onclick=()=>{ syncBiblio(); MODS_TEMP.length=0; MODS_CT_TEMP.length=0; editandoId=null; repintaMods(); ver('v-nova'); };
+$('#m-personagem').onclick=()=>{ syncBiblio(); MODS_TEMP.length=0; MODS_CT_TEMP.length=0; editandoId=null; repintaMods(); ver('v-per'); };
 $('#n-cancel').onclick=()=>ver('v-home');
 $('#p-cancel').onclick=()=>ver('v-home');
 
 async function iniciar(modo,dados){
-  H=Object.assign({modo,universo:'',premissa:'',tom:'equilibrado',ritmo:'equilibrado',ficha:'',memory:[],
+  if(H) syncBiblio();                 /* preserva a história atual na biblioteca 📚 */
+  MODS_TEMP.length=0; MODS_CT_TEMP.length=0;
+  H=Object.assign({id:'h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),modo,universo:'',premissa:'',tom:'equilibrado',ritmo:'equilibrado',ficha:'',memory:[],
     turnos:[],pesquisa:[],plog:[],chatlog:'',chatlogAt:0,mods:[],modsCustom:[]},dados);
-  salvar(); ver('v-hist'); render();
+  syncBiblio(); salvar(); ver('v-hist'); render();
   const abertura=(modo==='personagem')
     ?'ABERTURA (in medias res): comece NO MEIO de uma cena do cotidiano do personagem, com algo acontecendo AGORA. No máximo 2 parágrafos curtos. NÃO apresente o personagem, NÃO biografe, NÃO resuma a ficha — mostre ele AGINDO (diálogo ou ação). Termine com um gancho aberto que convide o usuário a agir, e o bloco de escolhas.'
     :'ABERTURA (in medias res): mergulhe direto numa cena com algo acontecendo AGORA. No máximo 2 parágrafos curtos — cenário aparece pelos sentidos e pelo conflito, sem exposição. Termine com um gancho aberto e o bloco de escolhas.';
@@ -1095,10 +1222,12 @@ async function iniciar(modo,dados){
 $('#n-go').onclick=async()=>{
   const uni=$('#f-uni').value.trim();
   if(!uni){ toast('Dá pelo menos um universo 🙂'); return; }
-  $('#n-go').disabled=true;
-  await iniciar('nova',{universo:uni,premissa:$('#f-pre').value.trim(),tom:$('#f-tom').value,ritmo:$('#f-rit').value,
+  const campos={universo:uni,premissa:$('#f-pre').value.trim(),tom:$('#f-tom').value,ritmo:$('#f-rit').value,
     extra:$('#f-per').value.trim()?('O USUÁRIO INTERPRETA: '+$('#f-per').value.trim()):'',
-    mods:MODS_TEMP.slice(),modsCustom:MODS_CT_TEMP.slice()});
+    mods:MODS_TEMP.slice(),modsCustom:MODS_CT_TEMP.slice()};
+  if(editandoId){ $('#n-go').disabled=true; salvaEdicao(campos); $('#n-go').disabled=false; return; }
+  $('#n-go').disabled=true;
+  await iniciar('nova',campos);
   $('#n-go').disabled=false;
 };
 function montarFicha(){
@@ -1119,9 +1248,11 @@ function montarFicha(){
 $('#p-go').onclick=async()=>{
   const fi=montarFicha().trim();
   if(!fi){ toast('Preencha pelo menos o nome — ou deixe a IA pesquisar 🙂'); return; }
+  const campos={ficha:fi,universo:$('#p-uni').value.trim(),premissa:$('#p-pre').value.trim(),
+    mods:MODS_TEMP.slice(),modsCustom:MODS_CT_TEMP.slice()};
+  if(editandoId){ $('#p-go').disabled=true; salvaEdicao(campos); $('#p-go').disabled=false; return; }
   $('#p-go').disabled=true;
-  await iniciar('personagem',{ficha:fi,universo:$('#p-uni').value.trim(),premissa:$('#p-pre').value.trim(),
-    mods:MODS_TEMP.slice(),modsCustom:MODS_CT_TEMP.slice()});
+  await iniciar('personagem',campos);
   $('#p-go').disabled=false;
 };
 
@@ -1242,6 +1373,10 @@ $('#in').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.pre
 
 /* ============ boot ============ */
 repintaMods();
+if(H){
+  if(!H.id) H.id='h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);   /* histórias antigas entram na biblioteca */
+  syncBiblio();
+}
 if(H&&H.turnos&&H.turnos.length){ ver('v-hist'); render(); }
 else ver('v-home');
 </script>
