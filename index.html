@@ -475,8 +475,15 @@ let CFG=Object.assign({},CFG_DEF,store.getJ('ch_cfg')||{});
 /* config antiga salva não re-bloqueia o proxy: proxy vive em CFG_DEF (merge acima) */
 function saveCfg(){store.set('ch_cfg',JSON.stringify(CFG));}
 const POLL='https://text.pollinations.ai/openai';
-const MODEL_OR='google/gemma-4-26b-a4b-it:free';
-const MODEL_NV='openai/gpt-oss-20b';
+/* 🧠 FILAS DE RESERVA: se um modelo bate limite (429), o próximo entra — pools DIFERENTES
+   pra não depender de um fornecedor só. Testados ao vivo: RP limpo em pt-BR. */
+const FILA_OR=['google/gemma-4-26b-a4b-it:free','inclusionai/ling-3.0-flash-vl:free','nex-agi/nex-n2.5-mini:free','google/gemma-4-31b-it:free','nvidia/nemotron-3-super-120b-a12b:free'];
+const FILA_NV=['openai/gpt-oss-20b','nvidia/nemotron-3-super-120b-a12b'];
+const MODEL_OR=FILA_OR[0];
+const MODEL_NV=FILA_NV[0];
+let FAV={or:'',nv:''};   /* o último modelo que funcionou sobe pra frente da fila */
+function filaOR(){ const l=[]; if(CFG.mOr) l.push(CFG.mOr); if(FAV.or) l.push(FAV.or); for(const m of FILA_OR) if(!l.includes(m)) l.push(m); return l; }
+function filaNV(){ const l=[]; if(CFG.mNv) l.push(CFG.mNv); if(FAV.nv) l.push(FAV.nv); for(const m of FILA_NV) if(!l.includes(m)) l.push(m); return l; }
 
 async function callAI(msgs){
   const erros=[];
@@ -484,24 +491,24 @@ async function callAI(msgs){
   /* 🔐 PROXY: quando configurado, as chaves ficam no servidor — nada de chave no navegador */
   const viaProxy=CFG.proxy&&(CFG.prov==='auto'||CFG.prov==='openrouter'||CFG.prov==='nvidia');
   if(CFG.prov==='auto'){
-    if(CFG.key) tentativas.push({nome:'openrouter',url:'https://openrouter.ai/api/v1/chat/completions',key:CFG.key,model:CFG.mOr||MODEL_OR,or:true});
-    if(CFG.keynv) tentativas.push({nome:'nvidia',url:'https://integrate.api.nvidia.com/v1/chat/completions',key:CFG.keynv,model:CFG.mNv||MODEL_NV});
+    if(CFG.key) filaOR().forEach(m=>tentativas.push({nome:'openrouter',url:'https://openrouter.ai/api/v1/chat/completions',key:CFG.key,model:m,or:true}));
+    if(CFG.keynv) filaNV().forEach(m=>tentativas.push({nome:'nvidia',url:'https://integrate.api.nvidia.com/v1/chat/completions',key:CFG.keynv,model:m}));
     if(viaProxy){
-      tentativas.push({nome:'proxy·openrouter',url:CFG.proxy,provider:'openrouter',model:CFG.mOr||MODEL_OR});
-      tentativas.push({nome:'proxy·nvidia',url:CFG.proxy,provider:'nvidia',model:CFG.mNv||MODEL_NV});
+      filaOR().forEach(m=>tentativas.push({nome:'proxy·openrouter',url:CFG.proxy,provider:'openrouter',model:m}));
+      filaNV().forEach(m=>tentativas.push({nome:'proxy·nvidia',url:CFG.proxy,provider:'nvidia',model:m}));
     }
   } else if(CFG.prov==='openrouter'){
-    tentativas.push({nome:'openrouter',url:'https://openrouter.ai/api/v1/chat/completions',key:CFG.key,model:CFG.mOr||MODEL_OR,or:true});
+    filaOR().forEach(m=>tentativas.push({nome:'openrouter',url:'https://openrouter.ai/api/v1/chat/completions',key:CFG.key,model:m,or:true}));
   } else if(CFG.prov==='nvidia'){
-    tentativas.push({nome:'nvidia',url:'https://integrate.api.nvidia.com/v1/chat/completions',key:CFG.keynv||CFG.key,model:CFG.mNv||MODEL_NV});
+    filaNV().forEach(m=>tentativas.push({nome:'nvidia',url:'https://integrate.api.nvidia.com/v1/chat/completions',key:CFG.keynv||CFG.key,model:m}));
   } else if(CFG.prov==='custom'){
     if(!CFG.base) throw new Error('endpoint personalizado sem Base URL — abra ⚙️');
     tentativas.push({nome:'custom',url:CFG.base.replace(/\/$/,'')+'/chat/completions',key:CFG.key,model:CFG.model||MODEL_OR});
   }
   tentativas.push({nome:'pollinations',url:POLL,key:'',model:''});
-  for(const t of tentativas){
+  const tentar=async(t,esperaMax)=>{
     const ctl=('AbortController'in window)?new AbortController():null;
-    const timer=ctl?setTimeout(()=>ctl.abort(),90000):null;
+    const timer=ctl?setTimeout(()=>ctl.abort(),esperaMax):null;
     try{
       const r=await fetch(t.url,{method:'POST',
         headers:t.provider?{'Content-Type':'application/json'}:Object.assign({'Content-Type':'application/json'},
@@ -509,18 +516,28 @@ async function callAI(msgs){
           t.or?{'HTTP-Referer':location.origin,'X-Title':'SoulChat'}:{}),
         body:JSON.stringify(t.provider?{provider:t.provider,model:t.model,messages:msgs}:{model:t.model||undefined,messages:msgs}),
         signal:ctl?ctl.signal:undefined});
-      if(!r.ok){ erros.push(t.nome+' '+r.status); continue; }
+      if(!r.ok){ erros.push(t.nome+(t.model?'['+t.model.split('/').pop().replace(':free','')+']':'')+' '+r.status); return null; }
       const d=await r.json();
       const txt=d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
       if(txt&&/reached its budget|rate.?limit|quota exceeded|invalid api key|insufficient/i.test(txt)&&txt.length<500){
-        erros.push(t.nome+' sem créditos/limite'); continue;   /* provedor responde erro-texto com HTTP 200 */
+        erros.push(t.nome+' sem créditos/limite'); return null;   /* provedor responde erro-texto com HTTP 200 */
       }
-      if(txt) return txt;
-      erros.push(t.nome+' resposta vazia');
-    }catch(e){ erros.push(t.nome+(e&&e.name==='AbortError'?' demorou 90s':' falhou')); }
+      if(txt){ if(/openrouter/i.test(t.nome)) FAV.or=t.model||FAV.or; else if(/nvidia/i.test(t.nome)) FAV.nv=t.model||FAV.nv; return txt; }
+      erros.push(t.nome+' resposta vazia'); return null;
+    }catch(e){ erros.push(t.nome+(e&&e.name==='AbortError'?' demorou '+(esperaMax/1000)+'s':' falhou')); return null; }
     finally{ if(timer) clearTimeout(timer); }
+  };
+  for(let i=0;i<tentativas.length;i++){
+    const txt=await tentar(tentativas[i],i===0?90000:45000);
+    if(txt) return txt;
   }
-  throw new Error('IA indisponível ('+erros.join(' · ')+')');
+  /* 429 é momentâneo (pool grátis compartilhado): respira 5s e tenta mais uma vez os principais */
+  if(erros.some(e=>e.includes(' 429'))){
+    await new Promise(r=>setTimeout(r,5000));
+    const deNovo=tentativas.filter(t=>t.provider||t.nome==='openrouter'||t.nome==='nvidia').slice(0,2);
+    for(const t of deNovo){ const txt=await tentar(t,60000); if(txt) return txt; }
+  }
+  throw new Error('⚠️ as IAs estão lotadas agora ('+erros.join(' · ')+'). Costuma ser limite temporário — espera ~1 min e manda de novo, que volta sozinho.');
 }
 
 /* ============ preferências (idioma/tema/modo de fala) ============ */
