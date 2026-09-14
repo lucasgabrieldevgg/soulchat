@@ -782,7 +782,8 @@ function systemPrompt(){
   if(mods.length) p.push(`MODIFICADORES ATIVOS (obedeça rigorosamente):\n- ${mods.join('\n- ')}`);
   p.push(`REGRAS DE NARRAÇÃO:
 - Narre em 2 a 4 parágrafos vívidos e envolventes (diálogos, sensações, tensão). Nada de listas na narração.
-- NUNCA decida nem narre a ação do usuário; só reaja ao que ele fez.
+- NUNCA faça apresentação/biografia do personagem nem repita a ficha em prosa — o usuário JÁ SABE quem é: mostre o personagem AGINDO. Nada de exposição longa do cenário: ele aparece pelos sentidos e pelo conflito.
+- NUNCA decida nem narre a ação do usuário; só reaja ao que ele fez. Depois de cada cena, devolva o controle pra ele.
 - Mantenha consistência absoluta com o RESUMO MESTRE, a MEMÓRIA, a PESQUISA RECENTE e tudo que já aconteceu.
 - Interprete os códigos do usuário: *texto* = ação dele; "fala" = fala dele; (OOC: …) = instrução do AUTOR — obedeça sem narrar como parte da história.
 - TOM e RITMO podem mudar no meio via códigos: adapte-se imediatamente.
@@ -1086,7 +1087,10 @@ async function iniciar(modo,dados){
   H=Object.assign({modo,universo:'',premissa:'',tom:'equilibrado',ritmo:'equilibrado',ficha:'',memory:[],
     turnos:[],pesquisa:[],plog:[],chatlog:'',chatlogAt:0,mods:[],modsCustom:[]},dados);
   salvar(); ver('v-hist'); render();
-  await narrar(null,true);
+  const abertura=(modo==='personagem')
+    ?'ABERTURA (in medias res): comece NO MEIO de uma cena do cotidiano do personagem, com algo acontecendo AGORA. No máximo 2 parágrafos curtos. NÃO apresente o personagem, NÃO biografe, NÃO resuma a ficha — mostre ele AGINDO (diálogo ou ação). Termine com um gancho aberto que convide o usuário a agir, e o bloco de escolhas.'
+    :'ABERTURA (in medias res): mergulhe direto numa cena com algo acontecendo AGORA. No máximo 2 parágrafos curtos — cenário aparece pelos sentidos e pelo conflito, sem exposição. Termine com um gancho aberto e o bloco de escolhas.';
+  await narrar(abertura,false);
 }
 $('#n-go').onclick=async()=>{
   const uni=$('#f-uni').value.trim();
