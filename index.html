@@ -316,6 +316,7 @@
     <p class="hint" id="pes-desc" style="margin:6px 0 8px"></p>
     <div class="row left">
       <button id="p-pesq" class="btn">🔎 Pesquisar e preencher</button>
+      <button id="p-limpar" class="btn ghost" title="apaga todos os campos da ficha">🧹 Limpar campos</button>
     </div>
     <label>Foto do personagem <span style="font-weight:400">(link da imagem — a 🔎 pesquisa acha sozinha)</span></label>
     <div style="display:flex;gap:10px;align-items:center">
@@ -1468,8 +1469,14 @@ function novaHistoria(){ syncBiblio(); MODS_TEMP.length=0; MODS_CT_TEMP.length=0
 $('#b-nova').onclick=()=>novaHistoria();
 $('#b-home').onclick=()=>novaHistoria();
 $('#m-nova').onclick=()=>{ syncBiblio(); MODS_TEMP.length=0; MODS_CT_TEMP.length=0; editandoId=null; repintaMods(); ver('v-nova'); };
-$('#m-personagem').onclick=()=>{ syncBiblio(); MODS_TEMP.length=0; MODS_CT_TEMP.length=0; editandoId=null; ESSENCIA_TEMP=''; MATERIA_TEMP=''; repintaMods(); pintaNiveisFicha(); ver('v-per'); };
+$('#m-personagem').onclick=()=>{ syncBiblio(); MODS_TEMP.length=0; MODS_CT_TEMP.length=0; editandoId=null; ESSENCIA_TEMP=''; MATERIA_TEMP=''; limparFichaCampos(); repintaMods(); pintaNiveisFicha(); ver('v-per'); };
 $('#n-cancel').onclick=()=>ver('v-home');
+function limparFichaCampos(){
+  ['q-nome','q-origem','q-foto','q-apar','q-pers','q-hist','q-hab','q-obj','q-extra','p-ficha','p-uni','p-pre'].forEach(id=>{ const el=$('#'+id); if(el) el.value=''; });
+  ESSENCIA_TEMP=''; MATERIA_TEMP='';
+  pintaPreviewFoto();
+}
+$('#p-limpar').onclick=()=>{ limparFichaCampos(); toast('🧹 campos limpos — ficha do zero'); };
 $('#p-cancel').onclick=()=>ver('v-home');
 
 async function iniciar(modo,dados){
@@ -1542,6 +1549,8 @@ async function pesquisarFicha(nivelIn){
   const nv=NIVEIS_FICHA[nivelIn||NIVEL_FICHA]||NIVEIS_FICHA.medio;
   const nome=$('#q-nome').value.trim();
   if(!nome){ toast('Escreva pelo menos o nome 🙂'); return; }
+  ['q-origem','q-apar','q-pers','q-hist','q-hab'].forEach(id=>{ const el=$('#'+id); if(el) el.value=''; });
+  ESSENCIA_TEMP=''; MATERIA_TEMP='';
   const btn=$('#p-pesq'); btn.disabled=true; const btnTxt=btn.textContent;
   const t0=Date.now();
   const passo=t=>{ btn.textContent='🔎 '+t; };
