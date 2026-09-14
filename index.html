@@ -56,6 +56,26 @@
 
   /* ─── home ─── */
   main{max-width:760px;margin:0 auto;padding:22px 16px 80px}
+  /* ═══ grupo ═══ */
+  .grp-msg{display:flex;gap:10px;margin:14px 0;align-items:flex-start}
+  .grp-msg .av{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.16);flex:none;background:#241d3a}
+  .grp-msg .bub{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-radius:4px 16px 16px 16px;padding:9px 13px;max-width:84%}
+  .grp-msg .gn{display:block;font-size:12.5px;opacity:.72;margin-bottom:3px}
+  .grp-msg .gt{white-space:pre-wrap;word-break:break-word}
+  .av.avletra{display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px;background:linear-gradient(135deg,#6d5bd0,#b056d6)!important}
+  .pensando{display:flex;gap:10px;align-items:center;margin:14px 0;color:var(--muted);font-size:13.5px}
+  .pensando .av{width:30px;height:30px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.16);background:#241d3a;flex:none}
+  .pensando .thinking{margin:0}
+  .gcard{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid rgba(255,255,255,.12);border-radius:14px;margin-bottom:8px;cursor:pointer;background:rgba(255,255,255,.03)}
+  .gcard.on{border-color:#8b7cf7;background:rgba(139,124,247,.13)}
+  .gcard img{width:42px;height:42px;border-radius:50%;object-fit:cover;background:#241d3a;flex:none}
+  .gcard .gi{flex:1;min-width:0}
+  .gcard .gi b{display:block;font-size:14.5px}
+  .gcard .gi small{color:var(--muted);font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gcard .ck{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.28);flex:none;display:flex;align-items:center;justify-content:center;font-size:13px}
+  .gcard.on .ck{background:#8b7cf7;border-color:#8b7cf7}
+  .gctx{margin:-3px 0 10px;padding:0 6px}
+  .gctx input{width:100%;box-sizing:border-box;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.13);border-radius:10px;color:var(--tx);padding:8px 10px;font-size:13px}
   /* respiro pra cima do composer fixo: a última fala do narrador nunca fica escondida atrás da caixa de escrever */
   #v-hist{padding-bottom:160px}
   @media (max-width:560px){ #v-hist{padding-bottom:180px} }
@@ -212,6 +232,7 @@
     <button id="b-voz" class="hbtn" title="Narrar em voz alta" aria-label="Voz">🔊</button>
     <button id="b-mods" class="hbtn" title="Modificadores — ligue/desligue estilos durante a conversa" aria-label="Modificadores">⚡</button>
     <button id="b-pesq" class="hbtn" title="Gerenciador de pesquisa (Wikipédia + Wikidata, qualquer idioma)" aria-label="Pesquisa">🔍</button>
+    <button id="b-grupo" class="hbtn" title="Gerenciar este grupo" aria-label="Grupo" hidden>👥</button>
     <button id="b-codes" class="hbtn" title="Códigos de controle" aria-label="Códigos">⌨️</button>
     <button id="b-export" class="hbtn" title="Exportar história (.txt)" aria-label="Exportar">⬇️</button>
     <button id="b-nova" class="hbtn" title="Nova história" aria-label="Nova história">✨</button>
@@ -236,6 +257,11 @@
       <div class="mi">🎭</div>
       <h3>Com personagem</h3>
       <p>Ficha do personagem — preencha do zero ou deixe a IA pesquisar e preencher pra você.</p>
+    </div>
+    <div class="mcard" id="m-grupo">
+      <div class="mi">👥</div>
+      <h3>Grupo</h3>
+      <p>Junte personagens da sua biblioteca no mesmo chat. Marque com @ quem vai falar — e eles reagem entre si.</p>
     </div>
   </div>
   <div id="biblio-wrap" class="bsec" hidden>
@@ -325,6 +351,18 @@
 </main>
 
 <!-- ═══ HISTÓRIA ═══ -->
+<!-- ═══ SETUP/GERENCIAR: GRUPO ═══ -->
+<main id="v-grupo" hidden>
+  <div class="sheet">
+    <button class="mini" id="g-cancel">← voltar</button>
+    <h2 id="g-tit-h">👥 Novo grupo</h2>
+    <input id="g-titulo" placeholder="Nome do grupo (ex.: Patrola da noite)" maxlength="60">
+    <p class="hint" style="color:var(--muted);font-size:13px">Escolha 2+ personagens da biblioteca 📚 (falta um? crie no 🎭). Pra cada um, você pode dizer o que ele faz ali.</p>
+    <div id="g-lista"></div>
+    <button id="g-go" class="go">✅ Criar grupo</button>
+  </div>
+</main>
+
 <main id="v-hist" hidden>
   <div id="feed"></div>
 </main>
@@ -553,7 +591,7 @@ function aplicaTema(){
 /* ============ estado ============ */
 let H=store.getJ('ch_historia')||null;
 if(H){ H.pesquisa=H.pesquisa||[]; H.plog=H.plog||[]; H.mods=H.mods||[]; H.modsCustom=H.modsCustom||[];
-       H.chatlog=H.chatlog||''; H.chatlogAt=H.chatlogAt||0; H.memory=H.memory||[]; H.essencia=H.essencia||''; H.materia=H.materia||''; }
+       H.chatlog=H.chatlog||''; H.chatlogAt=H.chatlogAt||0; H.memory=H.memory||[]; H.essencia=H.essencia||''; H.materia=H.materia||''; H.grupo=H.grupo||[]; H.grupoT=H.grupoT||''; }
 let ocupado=false, voz=false;
 const PSET={ get auto(){return store.get('ch_pesauto')!=='0';}, set auto(v){store.set('ch_pesauto',v?'1':'0');},
              get ctx(){return store.get('ch_pesctx')!=='0';}, set ctx(v){store.set('ch_pesctx',v?'1':'0');},
@@ -611,6 +649,7 @@ function biblio(){ return store.getJ('ch_biblio')||[]; }
 function setBiblio(b){ store.set('ch_biblio',JSON.stringify(b)); }
 function extraiFoto(f){ const m=(f||'').match(/Foto:\s*(\S+)/); return m?m[1]:''; }
 function tituloDe(hh){ const nome=(hh.ficha||'').split('\n').map(s=>s.replace(/^Nome:\s*/i,'').trim()).find(s=>s.length>1)||'';
+  if(hh.modo==='grupo') return hh.grupoT||'Grupo';
   if(hh.modo==='personagem') return nome||hh.universo||'Sem título';
   return (hh.universo||'').trim()||nome||'Sem título'; }
 function syncBiblio(hh){ hh=hh||H; if(!hh) return;
@@ -629,9 +668,9 @@ function renderBiblio(){
     const d=new Date(r.atualizado);
     const dt=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     return `<div class="bcard" data-id="${r.id}">
-      ${r.foto?`<img class="bfoto" src="${esc(r.foto)}" alt="">`:'<div class="bfoto bnone">'+(r.modo==='personagem'?'🎭':'📖')+'</div>'}
+      ${r.foto?`<img class="bfoto" src="${esc(r.foto)}" alt="">`:'<div class="bfoto bnone">'+(r.modo==='personagem'?'🎭':r.modo==='grupo'?'👥':'📖')+'</div>'}
       <div class="binfo"><div class="bt">${esc(r.titulo)}</div>
-      <div class="bs">${r.modo==='personagem'?'🎭 personagem':'📖 história'} · ${r.n} turnos · ${dt}</div></div>
+      <div class="bs">${r.modo==='personagem'?'🎭 personagem':r.modo==='grupo'?'👥 grupo':'📖 história'} · ${r.n} turnos · ${dt}</div></div>
       <div class="bacts">
         <button class="mini" data-a="abrir" title="abrir">▶</button>
         <button class="mini" data-a="editar" title="editar dados">✏️</button>
@@ -668,6 +707,7 @@ function parseFicha(txt){
 function editarHist(id){
   syncBiblio();
   const r=biblio().find(x=>x.id===id); if(!r) return;
+  if(r.modo==='grupo'){ abrirHist(id); montarVGrupo((H.grupo||[]).map(m=>Object.assign({},m))); return; }
   editandoId=id;
   MODS_TEMP.length=0; (r.dados.mods||[]).forEach(m=>MODS_TEMP.push(m));
   MODS_CT_TEMP.length=0; (r.dados.modsCustom||[]).forEach(m=>MODS_CT_TEMP.push(m));
@@ -954,6 +994,20 @@ function systemPrompt(){
     else if(PREF.fala==='narrado') p.push('MODO DE FALA: o narrador conduz em 3ª pessoa, contando a cena; o personagem aparece nas falas e ações.');
     else p.push('MODO DE FALA (automático): se o usuário CONVERSAR, o personagem responde direto em 1ª pessoa; se o usuário AGIR (*ação*), narre a cena em 3ª pessoa. Adapte sozinho, sem anunciar a troca. Em qualquer modo, a ação escrita pelo usuário conta como FEITA — reaja a ela, não a re-descreva.');
   }
+  if(H.modo==='grupo'&&H.grupo&&H.grupo.length){
+    const parts=H.grupo.map(m=>{
+      const e=essenciaDe(m);
+      return '@'+m.nome+(m.ctx?' — papel aqui: '+m.ctx:'')+(e?'\n  ESSENCA: '+e.split('\n').slice(0,10).join(' | '):'');
+    }).join('\n');
+    p.push(`GRUPO "${H.grupoT||'sem nome'}" — PARTICIPANTES (personagens INDEPENDENTES; cada um fala só por si):
+${parts}
+REGRAS DO GRUPO:
+- Cada resposta é de UM personagem só, começa com "@Nome:" e fala em 1ª pessoa, curta e viva, no jeito dele (essência acima manda).
+- Se a pessoa marcou alguém com @, responde o marcado. Se não marcou ninguém, entra quem fizer mais sentido NA HORA (varie!).
+- NUNCA escreva falas, ações, pensamentos ou reações de outro participante nem da pessoa.
+- PASSAR A VEZ: somente se for MUITO necessário (o outro foi diretamente chamado/afetado) — termine a resposta com @Nome dele. Máximo 1 passe por resposta. Nunca passe de volta pra quem acabou de falar. Sem a pessoa, o grupo NÃO continua sozinho.
+- Personagens podem discordar entre si com personalidade, mas sem monólogo coletivo e sem virar pingue-pongue infinito.`);
+  }
   const mods=instrucoesMods();
   if(mods.length) p.push(`MODIFICADORES ATIVOS (obedeça rigorosamente):\n- ${mods.join('\n- ')}`);
   p.push(`REGRAS DE NARRAÇÃO:
@@ -983,6 +1037,7 @@ function msgsParaIA(instrucaoExtra){
   const msgs=[{role:'system',content:systemPrompt()}];
   for(const t of (H.turnos||[]).slice(-TURNOS_ENVIADOS)){
     if(t.who==='narr') msgs.push({role:'assistant',content:t.text});
+    else if(t.who==='grp') msgs.push({role:'assistant',content:'@'+(t.nome||'?')+': '+t.text});
     else if(t.who==='user') msgs.push({role:'user',content:t.text});
   }
   if(instrucaoExtra) msgs.push({role:'user',content:instrucaoExtra});
@@ -1014,7 +1069,7 @@ async function atualizarChatlog(){
   if(novos.length<2) return;
   const fim=(H.turnos||[]).length;
   try{
-    const texto=novos.map(t=>(t.who==='narr'?'NARRADOR: ':'USUÁRIO: ')+String(t.text).slice(0,600)).join('\n').slice(-5000);
+    const texto=novos.map(t=>(t.who==='narr'?'NARRADOR: ':(t.who==='grp'?'@'+(t.nome||'?')+': ':'USUÁRIO: '))+String(t.text).slice(0,600)).join('\n').slice(-5000);
     const r=await callAI([
       {role:'system',content:'Você mantém o RESUMO MESTRE de uma história interativa. Incorpore os NOVOS ACONTECIMENTOS ao resumo atual, preservando o que já estava lá. Responda SOMENTE o resumo atualizado, em bullets curtos (máx 18 linhas): personagens vivos, revelações, decisões tomadas, promessas, objetos importantes, ferimentos/mudanças de estado, relações, local onde a história parou. NUNCA invente nada que não esteja no material.'},
       {role:'user',content:'RESUMO ATUAL:\n'+(H.chatlog||'(vazio — comece agora)')+'\n\nNOVOS ACONTECIMENTOS:\n'+texto+'\n\nDevolva o RESUMO MESTRE atualizado (só os bullets).'}]);
@@ -1053,7 +1108,7 @@ async function enviar(){
   if(/^!continuar\b/i.test(txt)){ addTurno('user',txt); render(); await narrar('Continue a história por conta própria (2-4 parágrafos), SEM bloco de escolhas.',true); return; }
   const limpo=processarCodigos(txt);
   if(limpo){ addTurno('user',limpo); render(); }
-  await narrar(null);
+  if(H.modo==='grupo') await narrarGrupo(); else await narrar(null);
 }
 
 /* pesquisa forçada por código */
@@ -1075,8 +1130,9 @@ async function pesquisarPara(tema){
 
 async function narrar(instrucao,semBloco){
   ocupado=true; $('#send').disabled=true;
-  const th=document.createElement('div'); th.className='narr';
-  th.innerHTML='<span class="thinking"><i></i><i></i><i></i></span>';
+  const ehPers=(H.modo==='personagem');
+  const th=document.createElement('div'); th.className=ehPers?'pensando':'narr';
+  th.innerHTML=ehPers?(avHtml(extraiFoto(H.ficha),nomeDeFicha(H.ficha))+'<span class="thinking"><i></i><i></i><i></i></span><b> '+esc(nomeDeFicha(H.ficha)||'…')+' está escrevendo…</b>'):'<span class="thinking"><i></i><i></i><i></i></span>';
   $('#feed').appendChild(th); scrollFim();
   let extra=instrucao;
   if(/!opcoes/i.test((H.turnos[H.turnos.length-1]||{}).text||'')) extra='Ofereça o bloco de escolhas com prós e contras ao final.';
@@ -1127,8 +1183,146 @@ function separar(resp){
   return {narracao:narr.join('\n').trim(),escolhas:esc};
 }
 
+/* ═══════════ GRUPO: vários personagens no mesmo chat ═══════════ */
+const GRUPO_MAX_PASSES=1;  /* quantas vezes a IA passa a vez pra outro por mensagem sua (anti-spam) */
+let GSEL=[], GERENCIANDO=false;
+function membros(){ return (H&&H.grupo)?H.grupo:[]; }
+function nomeDeFicha(f){ const n=((f||'').split('\n').map(s=>s.replace(/^Nome:\s*/i,'').trim()).find(s=>s.length>1))||''; return n.split(/\s+/).slice(0,3).join(' '); }
+function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+function membroPorNome(n){ const alvo=norm(n).replace(/^@/,'').trim(); if(!alvo) return null; const ms=membros();
+  return ms.find(m=>norm(m.nome)===alvo)||ms.find(m=>norm(m.nome).split(/\s+/)[0]===alvo.split(/\s+/)[0])||ms.find(m=>norm(m.nome).includes(alvo)||alvo.includes(norm(m.nome).split(/\s+/)[0]))||null; }
+function essenciaDe(m){ const r=m&&m.id?biblio().find(x=>x.id===m.id):null; return (r&&r.dados&&r.dados.essencia)||m.ess||''; }
+function avHtml(foto,nome){ return foto?('<img class="av" src="'+esc(foto)+'" alt="">'):('<span class="av avletra">'+esc(((nome||'?').trim()[0]||'?').toUpperCase())+'</span>'); }
+
+function montarVGrupo(preSel){
+  GERENCIANDO=!!preSel;
+  GSEL=preSel?preSel.map(m=>Object.assign({},m)):[];
+  $('#g-tit-h').textContent=GERENCIANDO?'👥 Gerenciar grupo':'👥 Novo grupo';
+  $('#g-go').textContent=GERENCIANDO?'✅ Salvar grupo':'✅ Criar grupo';
+  $('#g-titulo').value=GERENCIANDO?(H.grupoT||''):'';
+  pintaGLista();
+  ver('v-grupo');
+}
+function pintaGLista(){
+  const cand=biblio().filter(r=>r.ficha&&nomeDeFicha(r.ficha));
+  $('#g-lista').innerHTML=cand.length?cand.map(r=>{
+    const sel=GSEL.find(m=>m.id===r.id);
+    return '<div class="gcard '+(sel?'on':'')+'" data-id="'+r.id+'">'+(r.foto?'<img src="'+esc(r.foto)+'" alt="">':'<span class="av avletra" style="width:42px;height:42px">'+esc((r.titulo||'?')[0]).toUpperCase()+'</span>')+'<div class="gi"><b>'+esc(r.titulo)+'</b><small>'+esc((r.universo||'').slice(0,60))+'</small></div><div class="ck">'+(sel?'✓':'')+'</div></div>'+(sel?'<div class="gctx"><input data-ctx="'+r.id+'" placeholder="O que ele faz neste grupo? (opcional)" value="'+esc(sel.ctx||'')+'" maxlength="120"></div>':'');
+  }).join(''):'<p class="hint" style="color:var(--muted)">Nenhum personagem na biblioteca ainda — crie um em 🎭 Com personagem (com 🔎 ele já entra com foto e essência).</p>';
+  $('#g-lista').querySelectorAll('.gcard').forEach(c=>{
+    c.onclick=e=>{ if(e.target&&e.target.closest&&e.target.closest('input')) return;
+      const id=c.dataset.id, ja=GSEL.find(m=>m.id===id);
+      if(ja) GSEL=GSEL.filter(m=>m.id!==id);
+      else{ const r=biblio().find(x=>x.id===id);
+        GSEL.push({id,nome:nomeDeFicha(r.ficha),foto:r.foto||'',ctx:'',ess:(r.dados&&r.dados.essencia)||''}); }
+      pintaGLista(); };
+  });
+  $('#g-lista').querySelectorAll('input[data-ctx]').forEach(i=>{
+    i.onclick=e=>e.stopPropagation();
+    i.oninput=()=>{ const m=GSEL.find(x=>x.id===i.dataset.ctx); if(m) m.ctx=i.value; };
+  });
+}
+$('#g-cancel').onclick=()=>{ if(GERENCIANDO&&H&&H.modo==='grupo'){ ver('v-hist'); render(); } else ver('v-home'); };
+$('#g-go').onclick=async()=>{
+  if(GSEL.length<2){ toast('Marca pelo menos 2 personagens 👥'); return; }
+  const titulo=$('#g-titulo').value.trim()||('Grupo de '+GSEL.length);
+  if(GERENCIANDO&&H&&H.modo==='grupo'){
+    H.grupo=GSEL.map(m=>Object.assign({},m)); H.grupoT=titulo;
+    syncBiblio(); salvar(); ver('v-hist'); render(); toast('👥 grupo atualizado'); return;
+  }
+  const grupo=GSEL.map(m=>Object.assign({},m));
+  MODS_TEMP.length=0; MODS_CT_TEMP.length=0; editandoId=null;
+  $('#g-go').disabled=true;
+  await iniciar('grupo',{grupo,grupoT:titulo});
+  $('#g-go').disabled=false;
+};
+$('#m-grupo').onclick=()=>{ syncBiblio(); montarVGrupo(null); };
+$('#b-grupo').onclick=()=>{ if(H&&H.modo==='grupo') montarVGrupo(H.grupo); };
+
+function pensandoEl(m){
+  const d=document.createElement('div'); d.className='pensando';
+  d.innerHTML=avHtml(m&&m.foto,m&&m.nome)+'<span class="thinking"><i></i><i></i><i></i></span><b> '+esc((m&&m.nome)||'…')+' está escrevendo…</b>';
+  $('#feed').appendChild(d); scrollFim(); return d;
+}
+function parseFalaGrupo(resp,falanteEsperado){
+  let s=(resp||'').replace(/```[a-zA-Z]*\s*/g,'').trim();
+  const m=s.match(/^\s*@?([\p{L}][\p{L}0-9 '’-]{0,40}?)\s*:\s*/u);
+  let nome=falanteEsperado?falanteEsperado.nome:'', foto=falanteEsperado?falanteEsperado.foto:'';
+  if(m){ const cand=membroPorNome(m[1]);
+    if(cand){ nome=cand.nome; foto=cand.foto; s=s.slice(m[0].length); }
+    else if(!falanteEsperado){ nome='?'; }
+    else s=s.replace(m[0],''); }
+  else if(!falanteEsperado){ nome='?'; }
+  const {narracao}=separar(s);
+  return {texto:(narracao.trim()||s.trim()),nome:nome||'?',foto:foto||''};
+}
+function proximoAlvo(texto,quemFalou){
+  const ms=(texto||'').match(/@([\p{L}][\p{L}0-9 '’-]{0,40})/gu)||[];
+  for(let i=ms.length-1;i>=0;i--){ const m=membroPorNome(ms[i]);
+    if(m&&m.nome!==quemFalou) return m; }
+  return null;
+}
+async function abrirGrupo(){
+  ocupado=true; $('#send').disabled=true;
+  const th=pensandoEl({nome:'o grupo',foto:''});
+  try{
+    const extra='PRIMEIRA MENSAGEM — apresentação do grupo: cada participante se apresenta em 1ª pessoa, UMA linha curta por personagem, cada linha começando com "@Nome:". NADA de cena ou ambiente. Última linha: um convite curto pra pessoa entrar (a conversa só começa quando ELA mandar a primeira mensagem — NUNCA escrevam por ela).';
+    const resp=await callAI(msgsParaIA(extra));
+    th.remove();
+    const linhas=String(resp).split(/\n/);
+    let convite=[], atual=null, buf=[];
+    const flush=()=>{ if(atual&&buf.length) addTurno('grp',buf.join('\n').trim(),null,atual.nome,atual.foto); atual=null; buf=[]; };
+    for(const l of linhas){
+      if(/^\s*@/.test(l)){
+        flush();
+        const f=parseFalaGrupo(l,null);
+        if(f.nome&&f.nome!=='?'&&f.texto){ atual={nome:f.nome,foto:f.foto}; buf=[f.texto]; }
+        else if(f.texto) convite.push(f.texto);
+      } else if(atual) buf.push(l);
+      else if(l.trim()) convite.push(l);
+    }
+    flush();
+    if(convite.length) addTurno('narr',convite.join('\n'));
+    if(!H.turnos.length) addTurno('narr','O grupo está reunido. Manda a primeira mensagem pra começar!');
+    salvar(); render(); falar(H.turnos.map(t=>t.text).join(' '));
+    atualizarChatlog();
+  }catch(e){ th.remove(); sysline('⚠️ '+e.message); }
+  ocupado=false; $('#send').disabled=false;
+}
+async function narrarGrupo(){
+  ocupado=true; $('#send').disabled=true;
+  try{
+    const ult=(H.turnos[H.turnos.length-1]||{}).text||'';
+    let alvo=null; const mUM=ult.match(/@([\p{L}][\p{L}0-9 '’-]{0,40})/gu)||[];
+    for(const mm of mUM){ const m=membroPorNome(mm[1]); if(m){ alvo=m; break; } }
+    let passes=0, falante=alvo, primeira=true;
+    while(true){
+      const th=pensandoEl(falante);
+      let extra=primeira
+        ?(falante?'A pessoa falou com VOCÊ. Responda SOMENTE como @'+falante.nome+', começando a mensagem com "@'+falante.nome+':".':'A pessoa falou ao grupo sem marcar ninguém: escolha o participante mais natural pra responder AGORA (um só). Comece com "@Nome do personagem:".')
+        :'@'+falante.nome+', você recebeu a vez. Responda como @'+falante.nome+', começando com "@'+falante.nome+':". Só entre se tiver algo essencial a dizer.';
+      let resp=await callAI(msgsParaIA(extra));
+      const consultas=pareceConsultaPesquisa(resp);
+      if(consultas){ plog('query','[auto] '+consultas.map(p=>(p.lang?p.lang+':':'')+p.q).join(' · ')); await rodarPesquisa(consultas);
+        resp=await callAI(msgsParaIA(extra+'A pesquisa solicitada foi concluída (PESQUISA RECENTE). Agora responda como indicado.')); }
+      th.remove();
+      const f=parseFalaGrupo(resp,falante);
+      addTurno('grp',f.texto,null,f.nome,f.foto);
+      salvar(); render(); falar(f.texto);
+      if(passes>=GRUPO_MAX_PASSES) break;
+      const prox=proximoAlvo(f.texto,f.nome);
+      if(!prox) break;
+      falante=prox; passes++; primeira=false;
+    }
+    atualizarChatlog();
+  }catch(e){ sysline('⚠️ '+e.message); render(); }
+  ocupado=false; $('#send').disabled=false;
+}
+
 /* ============ render ============ */
-function addTurno(who,text,choices){ H.turnos.push({who,text,choices:choices||null}); salvar(); }
+
+/* ============ render ============ */
+function addTurno(who,text,choices,nome,foto){ H.turnos.push({who,text,choices:choices||null,nome:nome||'',foto:foto||''}); salvar(); }
 function sysline(msg){ const d=document.createElement('div'); d.className='sys'; d.textContent=msg; $('#feed').appendChild(d); scrollFim(); }
 function scrollFim(){ setTimeout(()=>window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}),40); }
 function salvar(){ store.set('ch_historia',JSON.stringify(H)); }
@@ -1146,6 +1340,10 @@ function render(){
         c.querySelectorAll('.choice').forEach(b=>b.onclick=()=>escolher(+b.dataset.i));
         f.appendChild(c);
       }
+    } else if(t.who==='grp'){
+      const d=document.createElement('div'); d.className='grp-msg';
+      d.innerHTML=(t.foto?`<img class="av" src="${esc(t.foto)}" alt="">`:`<span class="av avletra">${esc((t.nome||'?').trim()[0]||'?').toUpperCase()}</span>`)+`<div class="bub"><b class="gn">${esc(t.nome||'?')}</b><span class="gt"></span></div>`;
+      d.querySelector('.gt').textContent=t.text; f.appendChild(d);
     } else {
       const d=document.createElement('div'); d.className='user';
       const tag=(t.text||'').match(/^\((OOC[^)]*)\)/i);
@@ -1251,7 +1449,7 @@ function exportar(){
   for(const t of H.turnos){
     if(t.who==='narr'){ out+=t.text+'\n\n';
       if(t.choices&&t.choices.length) out+=t.choices.map(o=>`  ▸ ${o.t}${o.p?' (prós: '+o.p+')':''}${o.c?' (contras: '+o.c+')':''}`).join('\n')+'\n\n';
-    } else out+='» '+t.text+'\n\n';
+    } else if(t.who==='grp'){ out+='@'+(t.nome||'?')+': '+t.text+'\n\n'; } else out+='» '+t.text+'\n\n';
   }
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([out],{type:'text/plain;charset=utf-8'}));
@@ -1261,9 +1459,11 @@ function exportar(){
 $('#b-export').onclick=exportar;
 
 /* ============ navegação ============ */
-function ver(id){ for(const v of['v-home','v-nova','v-per','v-hist']) $('#'+v).hidden=(v!==id);
+function ver(id){ for(const v of['v-home','v-nova','v-per','v-hist','v-grupo']) $('#'+v).hidden=(v!==id);
   if(id==='v-home') renderBiblio();
-  $('#composer').hidden=(id!=='v-hist'); }
+  $('#composer').hidden=(id!=='v-hist');
+  const bg=$('#b-grupo'); if(bg) bg.hidden=!(H&&H.modo==='grupo');
+  const ta=$('#in'); if(ta) ta.placeholder=(H&&H.modo==='grupo')?"@marcar quem vai falar · \"fala\" · *ação* · !resumo":'Sua ação… *abro a porta* "Tem alguém?" · !pesquisar: tema · !resumo (⌨️)'; }
 function novaHistoria(){ syncBiblio(); MODS_TEMP.length=0; MODS_CT_TEMP.length=0; editandoId=null; ver('v-home'); }
 $('#b-nova').onclick=()=>novaHistoria();
 $('#b-home').onclick=()=>novaHistoria();
@@ -1282,7 +1482,7 @@ async function iniciar(modo,dados){
   const abertura=(modo==='personagem')
     ?'PRIMEIRA MENSAGEM — apresentação: fale COMO o personagem, em 1ª pessoa, no máximo 2 parágrafos curtos. Se apresente de forma natural e no estilo dele (quem é, de onde vem, clima), SEM recitar a ficha em lista e SEM biografia longa. Termine com uma pergunta ou provocação convidando a pessoa a começar. NÃO crie cena, NÃO descreva cenário, NÃO invente alarme/acontecimento: a história começa quando a PESSOA mandar a primeira mensagem. NUNCA escreva ações ou falas dela.'
     :'PRIMEIRA MENSAGEM — apresentação do narrador: em no máximo 2 parágrafos curtos, apresente-se como NARRADOR da história que vai ser criada JUNTO, diga o clima do cenário em 1-2 frases e convide a pessoa a começar do jeito que ela quiser (uma ação entre *asteriscos*, uma fala entre "aspas" ou de qualquer jeito). NÃO crie cena, NÃO descreva cenário em detalhes, NÃO invente acontecimentos: a história começa quando a PESSOA mandar a primeira mensagem.';
-  await narrar(abertura,false);
+  if(modo==='grupo') await abrirGrupo(); else await narrar(abertura,false);
 }
 $('#n-go').onclick=async()=>{
   const uni=$('#f-uni').value.trim();
