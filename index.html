@@ -909,7 +909,7 @@ function systemPrompt(){
   p.push(`REGRAS DE NARRAÇÃO:
 - Narre em 2 a 4 parágrafos vívidos e envolventes (diálogos, sensações, tensão). Nada de listas na narração.
 - NUNCA faça apresentação/biografia do personagem nem repita a ficha em prosa — o usuário JÁ SABE quem é: mostre o personagem AGINDO. Nada de exposição longa do cenário: ele aparece pelos sentidos e pelo conflito.
-- NUNCA decida nem narre a ação do usuário; só reaja ao que ele fez. Depois de cada cena, devolva o controle pra ele.
+- NUNCA escreva ações, falas, pensamentos, sentimentos ou decisões do personagem do usuário. Proibido: "você diz…", "você lança fogo…", "você sente medo…", "você decide…". Só o USUÁRIO faz isso. NPCs e o mundo agem e falam à vontade; o personagem do usuário só se move quando o usuário escrever. Depois de cada cena, devolva o controle pra ele.
 - Mantenha consistência absoluta com o RESUMO MESTRE, a MEMÓRIA, a PESQUISA RECENTE e tudo que já aconteceu.
 - Interprete os códigos do usuário: *texto* = ação dele; "fala" = fala dele; (OOC: …) = instrução do AUTOR — obedeça sem narrar como parte da história.
 - TOM e RITMO podem mudar no meio via códigos: adapte-se imediatamente.
@@ -1060,7 +1060,7 @@ function separar(resp){
     if(/^\s*▸/.test(l)){ emBloco=true;
       const m=l.replace(/^\s*▸\s*/,'');
       const partes=m.split(/\s*\|\s*/);
-      esc.push({t:partes[0]||m,p:(m.match(/pr[oó]s:?\s*([^|]+)/i)||[])[1]||'',c:(m.match(/contras:?\s*(.+)$/i)||[])[1]||''});
+      esc.push({t:(partes[0]||m).replace(/[*_#]/g,''),p:(m.match(/pr[oó]s:?\s*([^|]+)/i)||[])[1]||'',c:(m.match(/contras:?\s*(.+)$/i)||[])[1]||''});
     } else if(!emBloco||l.trim()) narr.push(l);
   }
   return {narracao:narr.join('\n').trim(),escolhas:esc};
@@ -1218,8 +1218,8 @@ async function iniciar(modo,dados){
     turnos:[],pesquisa:[],plog:[],chatlog:'',chatlogAt:0,mods:[],modsCustom:[]},dados);
   syncBiblio(); salvar(); ver('v-hist'); render();
   const abertura=(modo==='personagem')
-    ?'ABERTURA (in medias res): comece NO MEIO de uma cena do cotidiano do personagem, com algo acontecendo AGORA. No máximo 2 parágrafos curtos. NÃO apresente o personagem, NÃO biografe, NÃO resuma a ficha — mostre ele AGINDO (diálogo ou ação). Termine com um gancho aberto que convide o usuário a agir, e o bloco de escolhas.'
-    :'ABERTURA (in medias res): mergulhe direto numa cena com algo acontecendo AGORA. No máximo 2 parágrafos curtos — cenário aparece pelos sentidos e pelo conflito, sem exposição. Termine com um gancho aberto e o bloco de escolhas.';
+    ?'ABERTURA (in medias res): comece NO MEIO de uma cena do cotidiano do personagem, com algo acontecendo AGORA ao redor dele. No máximo 2 parágrafos curtos. NÃO apresente nem biografe o personagem, NÃO resuma a ficha. IMPORTANTE: a cena é dos NPCs e do mundo — eles agem e falam COM o personagem do usuário, mas NUNCA narre ação, fala, pensamento ou decisão DELE (nem "você diz/faz/sente/decide"). Pode situar onde ele está ("você está no cockpit quando o alarme dispara"), mas o que ele faz é com o usuário. Termine com um gancho aberto que convide o usuário a agir, e o bloco de escolhas.'
+    :'ABERTURA (in medias res): mergulhe direto numa cena com algo acontecendo AGORA ao redor do personagem do usuário. No máximo 2 parágrafos curtos — cenário pelos sentidos e pelo conflito, sem exposição. NPCs agem e falam; NUNCA narre ação, fala ou decisão do personagem do usuário. Termine com um gancho aberto e o bloco de escolhas.';
   await narrar(abertura,false);
 }
 $('#n-go').onclick=async()=>{
