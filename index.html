@@ -558,9 +558,13 @@ let ULTIMA_FOTO='', ULTIMA_RESUMOS=[];   /* foto + resumos da última pesquisa (
 function plog(tipo,txt,extra){ if(!H) return; H.plog.unshift({tipo,txt,extra:extra||'',t:Date.now()});
   if(H.plog.length>LOGMAX) H.plog.length=LOGMAX; salvar(); renderPes(); }
 async function getJSON(url){
-  const r=await fetch(url);
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  return r.json();
+  const ctl=('AbortController'in window)?new AbortController():null;
+  const timer=ctl?setTimeout(()=>ctl.abort(),8000):null;   /* nada de espera infinita */
+  try{
+    const r=await fetch(url,{signal:ctl?ctl.signal:undefined});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return await r.json();
+  } finally{ if(timer) clearTimeout(timer); }
 }
 /* Wikipédia: busca de artigos (qualquer idioma) */
 async function wikiSearch(q,lang,lim){
@@ -606,6 +610,9 @@ async function wdFacts(nome){
   const d=await getJSON(`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${ent.id}&props=claims|labels&languages=pt|en&format=json&origin=*`);
   const e2=d.entities&&d.entities[ent.id]; if(!e2) return null;
   const rot=e2.labels&&(e2.labels.pt||e2.labels.en);
+  /* P18 = imagem oficial do item no Wikidata (Commons) — a foto certa do personagem */
+  const imgRaw=e2.claims&&e2.claims.P18&&e2.claims.P18[0]&&e2.claims.P18[0].mainsnak&&e2.claims.P18[0].mainsnak.datavalue&&e2.claims.P18[0].mainsnak.datavalue.value;
+  const foto=(imgRaw&&typeof imgRaw==='string')?('https://commons.wikimedia.org/wiki/Special:FilePath/'+encodeURIComponent(imgRaw)+'?width=600'):'';
   const fatos=[];
   for(const[prop,label]of Object.entries(WD_PROPS)){
     const cl=e2.claims&&e2.claims[prop]; if(!cl||!cl.length) continue;
@@ -627,7 +634,7 @@ async function wdFacts(nome){
         fatos[fatos.indexOf(f)]=`${f.label}: ${lb||f.qid}`; });
     }catch(e){}
   }
-  const out={id:ent.id,nome:(rot&&rot.value)||nome,desc:ent.description||'',fatos};
+  const out={id:ent.id,nome:(rot&&rot.value)||nome,desc:ent.description||'',fatos,foto};
   PC.put(key,out); return out;
 }
 
@@ -1114,43 +1121,75 @@ $('#p-go').onclick=async()=>{
   $('#p-go').disabled=false;
 };
 
-/* 🔎 pesquisa e preenche a ficha do personagem */
+/* 🔎 CAMINHO DIRETO DE FICHA (rápido): ~5 requisições + 1 IA.
+   Nada de pipeline pesado: busca pt+en em paralelo → melhor artigo
+   (casamento exato com o nome) → resumo+texto+Wikidata em paralelo →
+   foto via P18/thumbnail → UMA chamada de IA monta os campos. */
 async function pesquisarFicha(){
   const nome=$('#q-nome').value.trim();
   if(!nome){ toast('Escreva pelo menos o nome 🙂'); return; }
   const btn=$('#p-pesq'); btn.disabled=true; const btnTxt=btn.textContent; btn.textContent='🔎 pesquisando…';
+  const t0=Date.now();
   try{
-    const tema=nome+($('#q-origem').value.trim()?' ('+$('#q-origem').value.trim()+')':'');
-    let plano;
+    const origem=$('#q-origem').value.trim();
+    const consulta=origem?(nome+' '+origem):nome;
+    /* 1. busca ampla pt+en em paralelo */
+    let rs=[];
     try{
-      const planejo=await callAI([
-        {role:'system',content:'Você planeja buscas em Wikipédia/Wikidata sobre um PERSONAGEM. Devolva 1-3 consultas curtas, no IDIOMA que render mais informação (pt, en, es, fr, de, it, ja, zh, ru — anime/mangá → ja; ocidente → en; você decide). Responda SOMENTE com JSON: {"pesquisar":[{"q":"consulta","lang":"en"}]}'},
-        {role:'user',content:'Personagem a pesquisar: '+tema}]);
-      plano=pareceConsultaPesquisa(planejo);
+      const rp=wikiSearch(consulta,'pt',5).catch(()=>[]);
+      const re=wikiSearch(consulta,'en',5).catch(()=>[]);
+      rs=(await Promise.all([rp,re])).flat();
     }catch(e){}
-    if(!plano||!plano.length) plano=[{q:tema,lang:null}];
-    const notas=await rodarPesquisa(plano);
-    /* foto: pega da página da Wikipédia (se o usuário ainda não pôs uma) */
-    if(!$('#q-foto').value.trim()&&ULTIMA_FOTO){ $('#q-foto').value=ULTIMA_FOTO; pintaPreviewFoto(); }
-    if(!notas.length){ toast('Nada encontrado — preencha os campos manualmente'); return; }
+    /* 2. ranqueia: título que casa com o nome vence (não pega artigo errado) */
+    const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N} ]/gu,'').trim();
+    const nn=norm(nome), pal=nn.split(/\s+/).filter(w=>w.length>2);
+    const pontua=t=>{const n=norm(t); let s=0;
+      if(n===nn) s-=200; else if(n.includes(nn)) s-=120;
+      pal.forEach(w=>{ if(n.includes(w)) s-=10; });
+      if(origem&&n.includes(norm(origem.split(/\s+/)[0]))) s-=8;
+      return s;};
+    rs.sort((a,b)=>pontua(a.title)-pontua(b.title)||(b.words||0)-(a.words||0));
+    /* 3. melhor artigo: resumo + texto completo + Wikidata, tudo em paralelo */
+    let resumo=null,extra=null,wd=null;
+    if(rs.length){
+      const melhor=rs[0];
+      const [r,x,w]=await Promise.all([
+        wikiSummary(melhor.title,melhor.lang).catch(()=>null),
+        wikiExtract(melhor.title,melhor.lang).catch(()=>null),
+        wdFacts(melhor.title).catch(()=>null)]);
+      resumo=r; extra=x; wd=w;
+      if(resumo) plog('artigo',resumo.lang+':'+resumo.title,resumo.url);
+      if(wd) plog('wikidata',wd.id+' · '+wd.nome,(wd.foto?'[foto] · ':'')+wd.fatos.slice(0,5).join('; '));
+      /* foto: P18 do Wikidata (oficial) → thumbnail do artigo certo */
+      let foto=((wd&&wd.foto)||(resumo&&(resumo.orig||resumo.thumb))||'').split('?')[0];   /* sem utm/lixo da API */
+      if(foto&&!$('#q-foto').value.trim()){ $('#q-foto').value=foto; pintaPreviewFoto(); }
+    }
+    /* 4. matéria RICA (texto inteiro do artigo certo, não 200 chars) */
+    const materia=(resumo?('['+resumo.lang+'] '+resumo.title+': '+resumo.extract+'\n\n'):'')+
+      (extra?('TEXTO DO ARTIGO:\n'+(extra.txt||'').slice(0,6000)):'')+
+      (wd?('\nWIKIDATA: '+wd.nome+' ('+wd.id+')'+(wd.desc?' — '+wd.desc:'')+': '+wd.fatos.join('; ')):'');
+    if(!materia.trim()){ toast('Nada encontrado — preencha os campos manualmente'); return; }
+    /* 5. UMA chamada de IA preenche os campos (sem IA → texto cru do artigo) */
     const g=s=>{const el=$(s);return el?el.value.trim():'';};
-    const ja={nome,origem:g('#q-origem'),aparencia:g('#q-apar'),personalidade:g('#q-pers'),historia:g('#q-hist'),habilidades:g('#q-hab')};
+    const ja={nome,origem,aparencia:g('#q-apar'),personalidade:g('#q-pers'),historia:g('#q-hist'),habilidades:g('#q-hab')};
     let o=null;
     try{
       const r=await callAI([
-        {role:'system',content:'Preencha a ficha do personagem usando as NOTAS de pesquisa (fatos reais ou de cânone). NÃO altere campos já preenchidos pelo usuário (veja JÁ INFORMADO). Responda SOMENTE com JSON: {"origem":"","aparencia":"","personalidade":"","historia":"","habilidades":""} — "" quando não houver na nota. Máx 2 frases por campo.'},
-        {role:'user',content:'PERSONAGEM: '+nome+'\nJÁ INFORMADO (não alterar): '+JSON.stringify(ja)+'\n\nNOTAS:\n- '+notas.map(n=>n.n+' ['+n.f+']').join('\n- ')}]);
+        {role:'system',content:'Preencha a ficha do personagem com base no material (fatos reais ou de cânone). NÃO altere campos já preenchidos pelo usuário (veja JÁ INFORMADO). Responda SOMENTE com JSON: {"origem":"","aparencia":"","personalidade":"","historia":"","habilidades":""} — "" quando o material não trouxer. Máx 2 frases por campo, seja concreto (origem = obra/franquia).'},
+        {role:'user',content:'PERSONAGEM: '+nome+'\nJÁ INFORMADO (não alterar): '+JSON.stringify(ja)+'\n\nMATERIAL:\n'+materia}]);
       o=tentaJSON(r);
     }catch(e){ o=null; }
-    const put=(sel,v)=>{ const el=$(sel); if(el&&!el.value.trim()&&v) el.value=v; };
-    if(!o||typeof o!=='object'){
-      /* SEM IA: preenche direto da Wikipédia (notas cruas) — nunca falha por falta de chave */
-      put('#q-hist',notas.slice(0,4).map(n=>'• '+n.n).join('\n'));
-      toast('🔎 ficha preenchida direto da Wikipédia (IA indisponível) — confira os campos');
-      return;
+    const put=(sel,v)=>{ const el=$(sel); if(el&&!el.value.trim()&&v) el.value=String(v).slice(0,400); };
+    const seg=Math.round((Date.now()-t0)/1000);
+    if(o&&typeof o==='object'){
+      put('#q-origem',o.origem||origem); put('#q-apar',o.aparencia); put('#q-pers',o.personalidade); put('#q-hist',o.historia); put('#q-hab',o.habilidades);
+      toast('🔎 ficha preenchida em '+seg+'s — confira os campos');
+    }else{
+      const fonte=(extra&&extra.txt?extra.txt:(resumo?resumo.extract:materia));
+      const alt=fonte.split('\n').map(l=>l.trim()).filter(l=>l.length>25).slice(0,6).map(l=>'• '+l).join('\n');
+      put('#q-hist',alt||fonte.slice(0,600)); put('#q-origem',origem);
+      toast('🔎 preenchido direto da Wikipédia ('+seg+'s) — IA indisponível pra detalhar');
     }
-    put('#q-origem',o.origem); put('#q-apar',o.aparencia); put('#q-pers',o.personalidade); put('#q-hist',o.historia); put('#q-hab',o.habilidades);
-    toast('🔎 ficha preenchida com a pesquisa — confira os campos');
   }catch(e){ toast('⚠️ '+e.message); }
   btn.disabled=false; btn.textContent=btnTxt;
 }
