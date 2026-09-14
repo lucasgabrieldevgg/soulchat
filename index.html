@@ -14,6 +14,19 @@
     --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
     --grad:linear-gradient(135deg,#8b5cf6,#60a5fa);
   }
+  body.tema-claro{
+    --bg:#f2f0f8; --bg2:#ffffff; --bg3:#eae7f3; --ink:#251f36; --muted:#6a6284;
+    --line:rgba(80,50,150,.16); --glass:rgba(255,255,255,.88);
+    --brand:#7050e8; --brand2:#2f6fe0; --gold:#a1750f; --heart:#d63b53;
+    --shadow:0 12px 36px rgba(60,40,120,.12);
+  }
+  body.tema-claro::before,body.tema-claro::after{opacity:.45}
+  body.tema-claro .msheet{background:#ffffff}
+  body.tema-claro #toast{background:#ffffff;color:#251f36}
+  body.tema-claro code{background:#eeeaf8}
+  body.tema-claro .chip,body.tema-claro .switch,body.tema-claro .pes-item,body.tema-claro .sys{background:rgba(40,20,90,.04)}
+  body.tema-claro .btn{background:#ece8f7}
+  body.tema-claro .hbtn,body.tema-claro .mini{background:rgba(255,255,255,.6)}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);min-height:100vh;
     font:15.5px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
@@ -386,41 +399,34 @@
   </div>
 </div>
 
-<!-- ═══ CONFIG IA ═══ -->
+<!-- ═══ PREFERÊNCIAS ═══ -->
 <div id="m-cfg" class="modal" hidden>
   <div class="msheet">
-    <h2>⚙️ IA do narrador</h2>
-    <p class="hint">✅ A IA já vem funcionando de fábrica — <b>você não precisa configurar nada</b>. Quer usar as suas? Cole abaixo (entram na frente da fila) — ficam só neste navegador.</p>
-    <label>Provedor</label>
-    <select id="cfg-prov">
-      <option value="auto">🚀 Automático (fila: OpenRouter → NVIDIA → Pollinations)</option>
-      <option value="openrouter">OpenRouter (sua chave)</option>
-      <option value="nvidia">NVIDIA NIM (sua chave)</option>
-      <option value="custom">Personalizado (OpenAI-compatível — ex.: IA do SoulChat)</option>
+    <h2>⚙️ Preferências</h2>
+    <p class="hint">A IA já vem funcionando (proxy do criador, em segredo no servidor) — nada pra configurar aqui. Só o gostinho.</p>
+    <label>🌐 Idioma do site/narração</label>
+    <select id="cfg-lang">
+      <option value="auto">Automático (acompanha o idioma que você escrever)</option>
+      <option value="pt">Português (Brasil)</option>
+      <option value="en">English</option>
+      <option value="es">Español</option>
+      <option value="ja">日本語</option>
+      <option value="fr">Français</option>
+      <option value="de">Deutsch</option>
+      <option value="it">Italiano</option>
     </select>
-    <div id="cfg-keywrap">
-      <label id="cfg-keylbl">Chave OpenRouter (opcional — entra primeiro na fila)</label>
-      <input type="password" id="cfg-key" placeholder="sk-or-…" autocomplete="off">
-    </div>
-    <div id="cfg-or" hidden>
-      <label>Modelo no OpenRouter (opcional)</label>
-      <input type="text" id="cfg-mor" placeholder="padrão: google/gemma-4-26b-a4b-it:free">
-    </div>
-    <div id="cfg-nv" hidden>
-      <label>Chave NVIDIA NIM (opcional — fallback grátis com modelos grandes)</label>
-      <input type="password" id="cfg-keynv" placeholder="nvapi-…" autocomplete="off">
-      <label>Modelo na NVIDIA (opcional)</label>
-      <input type="text" id="cfg-mnv" placeholder="padrão: openai/gpt-oss-20b (rápido e limpo)">
-    </div>
-    <div id="cfg-open" hidden>
-      <label>Base URL</label>
-      <input type="text" id="cfg-base" placeholder="https://integrate.api.nvidia.com/v1">
-      <label>Modelo no endpoint (opcional)</label>
-      <input type="text" id="cfg-model" placeholder="ex.: meu-modelo-local">
-    </div>
-    <div class="note" style="font-size:12.5px;color:var(--muted);background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:12px">
-      No automático a fila é: <b>OpenRouter → NVIDIA → Pollinations</b> (a primeira que responder, vale; Pollinations está fora do ar, mas fica na fila caso volte). Sugestões grátis — OpenRouter: <code>google/gemma-4-26b-a4b-it:free</code>, <code>nvidia/nemotron-3-super-120b-a12b:free</code> (este às vezes vaza raciocínio no texto) · NVIDIA: <code>openai/gpt-oss-20b</code> (rápido, recomendado), <code>meta/muse-glimmer-30b</code> (mais literário, ~14s). A chave nunca sai do seu navegador: vai direto para o provedor.
-    </div>
+    <label>🎨 Aparência</label>
+    <select id="cfg-tema">
+      <option value="sistema">Sistema (segue o do seu aparelho)</option>
+      <option value="claro">☀️ Claro</option>
+      <option value="escuro">🌙 Escuro</option>
+    </select>
+    <label>🗣️ Como o personagem fala (modo personagem)</label>
+    <select id="cfg-fala">
+      <option value="auto">Automático (a IA adapta: conversa = direto, ação = narrado)</option>
+      <option value="direto">Direto — o personagem conversa com você em 1ª pessoa</option>
+      <option value="narrado">Narrado — o narrador conta em 3ª pessoa</option>
+    </select>
     <div class="row"><button id="cfg-close" class="btn primary">Salvar</button></div>
   </div>
 </div>
@@ -508,6 +514,16 @@ async function callAI(msgs){
     finally{ if(timer) clearTimeout(timer); }
   }
   throw new Error('IA indisponível ('+erros.join(' · ')+')');
+}
+
+/* ============ preferências (idioma/tema/modo de fala) ============ */
+const PREF={ get lang(){return store.get('ch_lang')||'auto';}, set lang(v){store.set('ch_lang',v);},
+            get tema(){return store.get('ch_tema')||'sistema';}, set tema(v){store.set('ch_tema',v);},
+            get fala(){return store.get('ch_fala')||'auto';}, set fala(v){store.set('ch_fala',v);} };
+function aplicaTema(){
+  const escuro=PREF.tema==='escuro'||(PREF.tema==='sistema'&&window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches===false);
+  document.body.classList.toggle('tema-claro',!escuro);
+  const mt=document.querySelector('meta[name=theme-color]'); if(mt) mt.content=escuro?'#0a0813':'#f2f0f8';
 }
 
 /* ============ estado ============ */
@@ -904,6 +920,14 @@ function systemPrompt(){
   if(H.premissa) p.push(`PREMISSA INICIAL: ${H.premissa}`);
   if(H.modo==='personagem'&&H.premissa) p.push(`COMEÇO: ${H.premissa}`);
   p.push(`TOM: ${H.tom}. RITMO: ${H.ritmo}.`);
+  const L=PREF.lang;
+  if(L==='auto') p.push('IDIOMA: responda no mesmo idioma das mensagens do usuário (padrão: português do Brasil).');
+  else p.push(`IDIOMA: responda SEMPRE em ${L}, mesmo se o usuário escrever em outro.`);
+  if(H.modo==='personagem'){
+    if(PREF.fala==='direto') p.push('MODO DE FALA: o personagem conversa DIRETAMENTE com o usuário em 1ª pessoa, como num chat (sem narração em 3ª pessoa). Ações dele entre *asteriscos* quando fizer sentido.');
+    else if(PREF.fala==='narrado') p.push('MODO DE FALA: o narrador conduz em 3ª pessoa, contando a cena; o personagem aparece nas falas e ações.');
+    else p.push('MODO DE FALA (automático): se o usuário CONVERSAR, o personagem responde direto em 1ª pessoa; se o usuário AGIR (*ação*), narre a cena em 3ª pessoa. Adapte sozinho, sem anunciar a troca.');
+  }
   const mods=instrucoesMods();
   if(mods.length) p.push(`MODIFICADORES ATIVOS (obedeça rigorosamente):\n- ${mods.join('\n- ')}`);
   p.push(`REGRAS DE NARRAÇÃO:
@@ -1341,31 +1365,18 @@ function pintaPreviewFoto(){
 }
 $('#q-foto').addEventListener('input',pintaPreviewFoto);
 
-/* ============ config UI ============ */
+/* ============ preferências UI ============ */
 function openCfg(){
-  $('#cfg-prov').value=CFG.prov; $('#cfg-key').value=CFG.key||''; $('#cfg-keynv').value=CFG.keynv||'';
-  $('#cfg-mor').value=CFG.mOr||''; $('#cfg-mnv').value=CFG.mNv||'';
-  $('#cfg-model').value=CFG.model||''; $('#cfg-base').value=CFG.base||'';
-  pintaCfgSecoes();
+  $('#cfg-lang').value=PREF.lang; $('#cfg-tema').value=PREF.tema; $('#cfg-fala').value=PREF.fala;
   $('#m-cfg').hidden=false;
 }
-function pintaCfgSecoes(){
-  const p=$('#cfg-prov').value;
-  $('#cfg-keywrap').hidden=!(p==='auto'||p==='openrouter'||p==='custom');
-  $('#cfg-keylbl').textContent=p==='custom'?'Chave de API do seu endpoint':'Chave OpenRouter (opcional — entra primeiro na fila)';
-  $('#cfg-key').placeholder=p==='custom'?'sk-…':'sk-or-…';
-  $('#cfg-or').hidden=!(p==='auto'||p==='openrouter');
-  $('#cfg-nv').hidden=!(p==='auto'||p==='nvidia');
-  $('#cfg-open').hidden=p!=='custom';
-}
 $('#b-cfg').onclick=openCfg;
-$('#cfg-prov').onchange=pintaCfgSecoes;
+$('#cfg-tema').onchange=e=>{ PREF.tema=e.target.value; aplicaTema(); };
 $('#cfg-close').onclick=()=>{
-  CFG.prov=$('#cfg-prov').value; CFG.key=$('#cfg-key').value.trim(); CFG.keynv=$('#cfg-keynv').value.trim();
-  CFG.mOr=$('#cfg-mor').value.trim(); CFG.mNv=$('#cfg-mnv').value.trim();
-  CFG.model=$('#cfg-model').value.trim(); CFG.base=$('#cfg-base').value.trim();
-  saveCfg(); $('#m-cfg').hidden=true; toast('⚙️ IA configurada ✓');
+  PREF.lang=$('#cfg-lang').value; PREF.tema=$('#cfg-tema').value; PREF.fala=$('#cfg-fala').value;
+  aplicaTema(); $('#m-cfg').hidden=true; toast('⚙️ preferências salvas ✓');
 };
+if(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').addEventListener) matchMedia('(prefers-color-scheme: light)').addEventListener('change',()=>{ if(PREF.tema==='sistema') aplicaTema(); });
 
 /* ============ códigos modal ============ */
 $('#b-codes').onclick=()=>{$('#m-codes').hidden=false;};
@@ -1376,6 +1387,7 @@ $('#send').onclick=enviar;
 $('#in').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); enviar(); } });
 
 /* ============ boot ============ */
+aplicaTema();
 repintaMods();
 if(H){
   if(!H.id) H.id='h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);   /* histórias antigas entram na biblioteca */
