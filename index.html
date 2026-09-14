@@ -914,7 +914,9 @@ function blocoPesquisa(){
 function systemPrompt(){
   const p=['Você é o NARRADOR de uma história interativa em português do Brasil.'];
   if(H.modo==='personagem'&&H.ficha)
-    p.push(`Você interpreta e narra a história do PERSONAGEM abaixo, em 3ª pessoa, junto do usuário (que é ele mesmo na história):\n### FICHA\n${H.ficha}\n###`);
+    p.push(`Você interpreta e narra a história do PERSONAGEM abaixo, junto do usuário (que é ele mesmo na história):\n### FICHA\n${H.ficha}\n###`);
+  if(H.modo==='personagem'&&H.essencia)
+    p.push(`### ESSENÇA DO PERSONAGEM (pesquisa profunda — FIDELIDADE MÁXIMA, releanha ANTES de cada resposta)\n${H.essencia}\n###\nFIDELIDADE: fale e aja SEMPRE no jeito deste personagem — vocabulário, bordões, ritmo de fala, valores e limites da ESSENÇA. Reaja COMO ELE reagiria, não como um assistente gentil. Respeite o que ele NUNCA faria. Se precisar decidir algo não dito, inferia coerentemente com a ESSENÇA.`);
   if(H.extra) p.push(H.extra);
   p.push(`CENÁRIO: ${H.universo||'livre'}`);
   if(H.premissa) p.push(`PREMISSA INICIAL: ${H.premissa}`);
@@ -1231,7 +1233,7 @@ function novaHistoria(){ syncBiblio(); MODS_TEMP.length=0; MODS_CT_TEMP.length=0
 $('#b-nova').onclick=()=>novaHistoria();
 $('#b-home').onclick=()=>novaHistoria();
 $('#m-nova').onclick=()=>{ syncBiblio(); MODS_TEMP.length=0; MODS_CT_TEMP.length=0; editandoId=null; repintaMods(); ver('v-nova'); };
-$('#m-personagem').onclick=()=>{ syncBiblio(); MODS_TEMP.length=0; MODS_CT_TEMP.length=0; editandoId=null; repintaMods(); ver('v-per'); };
+$('#m-personagem').onclick=()=>{ syncBiblio(); MODS_TEMP.length=0; MODS_CT_TEMP.length=0; editandoId=null; ESSENCIA_TEMP=''; repintaMods(); ver('v-per'); };
 $('#n-cancel').onclick=()=>ver('v-home');
 $('#p-cancel').onclick=()=>ver('v-home');
 
@@ -1239,7 +1241,7 @@ async function iniciar(modo,dados){
   if(H) syncBiblio();                 /* preserva a história atual na biblioteca 📚 */
   MODS_TEMP.length=0; MODS_CT_TEMP.length=0;
   H=Object.assign({id:'h'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),modo,universo:'',premissa:'',tom:'equilibrado',ritmo:'equilibrado',ficha:'',memory:[],
-    turnos:[],pesquisa:[],plog:[],chatlog:'',chatlogAt:0,mods:[],modsCustom:[]},dados);
+    turnos:[],pesquisa:[],plog:[],chatlog:'',chatlogAt:0,mods:[],modsCustom:[],essencia:''},dados);
   syncBiblio(); salvar(); ver('v-hist'); render();
   /* personagem se apresenta e devolve a palavra; história/conversa começa pela PESSOA */
   const abertura=(modo==='personagem')
@@ -1277,33 +1279,29 @@ $('#p-go').onclick=async()=>{
   const fi=montarFicha().trim();
   if(!fi){ toast('Preencha pelo menos o nome — ou deixe a IA pesquisar 🙂'); return; }
   const campos={ficha:fi,universo:$('#p-uni').value.trim(),premissa:$('#p-pre').value.trim(),
-    mods:MODS_TEMP.slice(),modsCustom:MODS_CT_TEMP.slice()};
-  if(editandoId){ $('#p-go').disabled=true; salvaEdicao(campos); $('#p-go').disabled=false; return; }
+    mods:MODS_TEMP.slice(),modsCustom:MODS_CT_TEMP.slice(),essencia:ESSENCIA_TEMP};
+  if(editandoId){ campos.essencia=ESSENCIA_TEMP||((biblio().find(x=>x.id===editandoId)||{dados:{}}).dados.essencia||''); $('#p-go').disabled=true; salvaEdicao(campos); $('#p-go').disabled=false; return; }
   $('#p-go').disabled=true;
   await iniciar('personagem',campos);
   $('#p-go').disabled=false;
 };
 
-/* 🔎 CAMINHO DIRETO DE FICHA (rápido): ~5 requisições + 1 IA.
-   Nada de pipeline pesado: busca pt+en em paralelo → melhor artigo
-   (casamento exato com o nome) → resumo+texto+Wikidata em paralelo →
-   foto via P18/thumbnail → UMA chamada de IA monta os campos. */
+/* 🔎 PESQUISA RÍGIDA DE FICHA: pode demorar, o objetivo é FIDELIDADE.
+   Lê até 4 artigos inteiros (personagem + universo) + Wikidata e
+   destila os campos + uma ESSENÇA profunda (jeito de falar, bordões,
+   valores, limites, reações) que passa a governar o narrador. */
+let ESSENCIA_TEMP='';
 async function pesquisarFicha(){
   const nome=$('#q-nome').value.trim();
   if(!nome){ toast('Escreva pelo menos o nome 🙂'); return; }
-  const btn=$('#p-pesq'); btn.disabled=true; const btnTxt=btn.textContent; btn.textContent='🔎 pesquisando…';
+  const btn=$('#p-pesq'); btn.disabled=true; const btnTxt=btn.textContent;
   const t0=Date.now();
+  const passo=t=>{ btn.textContent='🔎 '+t; };
   try{
     const origem=$('#q-origem').value.trim();
     const consulta=origem?(nome+' '+origem):nome;
-    /* 1. busca ampla pt+en em paralelo */
-    let rs=[];
-    try{
-      const rp=wikiSearch(consulta,'pt',5).catch(()=>[]);
-      const re=wikiSearch(consulta,'en',5).catch(()=>[]);
-      rs=(await Promise.all([rp,re])).flat();
-    }catch(e){}
-    /* 2. ranqueia: título que casa com o nome vence (não pega artigo errado) */
+    /* 1. busca ampla pt+en em paralelo (personagem) + artigo do universo */
+    passo('buscando fontes…');
     const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N} ]/gu,'').trim();
     const nn=norm(nome), pal=nn.split(/\s+/).filter(w=>w.length>2);
     const pontua=t=>{const n=norm(t); let s=0;
@@ -1311,34 +1309,59 @@ async function pesquisarFicha(){
       pal.forEach(w=>{ if(n.includes(w)) s-=10; });
       if(origem&&n.includes(norm(origem.split(/\s+/)[0]))) s-=8;
       return s;};
+    let rs=[];
+    try{
+      const rp=wikiSearch(consulta,'pt',6).catch(()=>[]);
+      const re=wikiSearch(consulta,'en',6).catch(()=>[]);
+      rs=(await Promise.all([rp,re])).flat();
+    }catch(e){}
     rs.sort((a,b)=>pontua(a.title)-pontua(b.title)||(b.words||0)-(a.words||0));
-    /* 3. melhor artigo: resumo + texto completo + Wikidata, tudo em paralelo */
-    let resumo=null,extra=null,wd=null;
-    if(rs.length){
-      const melhor=rs[0];
-      const [r,x,w]=await Promise.all([
-        wikiSummary(melhor.title,melhor.lang).catch(()=>null),
-        wikiExtract(melhor.title,melhor.lang).catch(()=>null),
-        wdFacts(melhor.title).catch(()=>null)]);
-      resumo=r; extra=x; wd=w;
-      if(resumo) plog('artigo',resumo.lang+':'+resumo.title,resumo.url);
-      if(wd) plog('wikidata',wd.id+' · '+wd.nome,(wd.foto?'[foto] · ':'')+wd.fatos.slice(0,5).join('; '));
-      /* foto: P18 do Wikidata (oficial) → thumbnail do artigo certo */
-      let foto=((wd&&wd.foto)||(resumo&&(resumo.orig||resumo.thumb))||'').split('?')[0];   /* sem utm/lixo da API */
-      if(foto&&!$('#q-foto').value.trim()){ $('#q-foto').value=foto; pintaPreviewFoto(); }
+    /* dedup e pega os 3 melhores do personagem */
+    const vistos=new Set();
+    const melhores=rs.filter(a=>{const k=a.lang+':'+a.title.toLowerCase(); if(vistos.has(k))return false; vistos.add(k); return true;}).slice(0,3);
+    /* artigo do universo (contexto do mundo) */
+    let artOrigem=null;
+    if(origem){
+      try{
+        const ro=await wikiSearch(origem,'pt',3).catch(()=>[]);
+        const reo=ro.length?ro:await wikiSearch(origem,'en',3).catch(()=>[]);
+        if(reo.length) artOrigem=reo[0];
+      }catch(e){}
     }
-    /* 4. matéria RICA (texto inteiro do artigo certo, não 200 chars) */
-    const materia=(resumo?('['+resumo.lang+'] '+resumo.title+': '+resumo.extract+'\n\n'):'')+
-      (extra?('TEXTO DO ARTIGO:\n'+(extra.txt||'').slice(0,6000)):'')+
-      (wd?('\nWIKIDATA: '+wd.nome+' ('+wd.id+')'+(wd.desc?' — '+wd.desc:'')+': '+wd.fatos.join('; ')):'');
+    /* 2. lê TUDO em paralelo: resumos + textos completos + Wikidata */
+    passo('lendo '+(melhores.length+(artOrigem?1:0))+' artigos…');
+    const lidas=await Promise.all(melhores.map(a=>
+      Promise.all([wikiSummary(a.title,a.lang).catch(()=>null),wikiExtract(a.title,a.lang).catch(()=>null),wdFacts(a.title).catch(()=>null)])
+    ));
+    let roSum=null,roExt=null;
+    if(artOrigem){ roSum=await wikiSummary(artOrigem.title,artOrigem.lang).catch(()=>null); roExt=await wikiExtract(artOrigem.title,artOrigem.lang).catch(()=>null); }
+    /* melhor foto: P18 do Wikidata com foto > thumbnails dos artigos */
+    let foto='';
+    for(const [r,x,w] of lidas){ if(w&&w.foto){ foto=w.foto; break; } }
+    if(!foto) for(const [r] of lidas){ if(r&&(r.orig||r.thumb)){ foto=r.orig||r.thumb; break; } }
+    foto=foto.split('?')[0];
+    if(foto&&!$('#q-foto').value.trim()){ $('#q-foto').value=foto; pintaPreviewFoto(); }
+    /* log transparente */
+    lidas.forEach(([r,x,w])=>{ if(r) plog('artigo',r.lang+':'+r.title,r.url); if(w) plog('wikidata',w.id+' · '+w.nome,w.fatos.slice(0,4).join('; ')); });
+    if(roSum) plog('artigo','[universo] '+roSum.lang+':'+roSum.title,roSum.url);
+    /* 3. matéria rica: TODOS os textos */
+    let materia='';
+    lidas.forEach(([r,x,w],i)=>{
+      if(r) materia+='['+r.lang+'] '+r.title+': '+r.extract+'\n';
+      if(x&&x.txt) materia+='TEXTO ('+r.title+'):\n'+x.txt.slice(0,6000)+'\n\n';
+      if(w) materia+='WIKIDATA '+w.id+': '+w.nome+(w.desc?' — '+w.desc:'')+': '+w.fatos.join('; ')+'\n';
+    });
+    if(roSum) materia+='\n[UNIVERSO] '+roSum.title+': '+roSum.extract+'\n';
+    if(roExt&&roExt.txt) materia+='TEXTO DO UNIVERSO:\n'+roExt.txt.slice(0,4000)+'\n';
     if(!materia.trim()){ toast('Nada encontrado — preencha os campos manualmente'); return; }
-    /* 5. UMA chamada de IA preenche os campos (sem IA → texto cru do artigo) */
+    /* 4. UMA destilação profunda: campos + ESSENÇA */
+    passo('destilando a essência…');
     const g=s=>{const el=$(s);return el?el.value.trim():'';};
     const ja={nome,origem,aparencia:g('#q-apar'),personalidade:g('#q-pers'),historia:g('#q-hist'),habilidades:g('#q-hab')};
     let o=null;
     try{
       const r=await callAI([
-        {role:'system',content:'Preencha a ficha do personagem com base no material (fatos reais ou de cânone). NÃO altere campos já preenchidos pelo usuário (veja JÁ INFORMADO). Responda SOMENTE com JSON: {"origem":"","aparencia":"","personalidade":"","historia":"","habilidades":""} — "" quando o material não trouxer. Máx 2 frases por campo, seja concreto (origem = obra/franquia).'},
+        {role:'system',content:'Você é um especialista em personagens (cânone, RPG, roleplay). Com base no MATERIAL (fatos reais/de cânone), preencha a ficha E destile a ESSENÇA psicológica do personagem. NÃO altere campos já preenchidos pelo usuário (JÁ INFORMADO). Responda SOMENTE com JSON:\n{"origem":"obra/franquia","aparencia":"máx 2 frases","personalidade":"máx 3 frases","historia":"máx 3 frases","habilidades":"máx 2 frases","essencia":"12 a 16 linhas, cada uma começando com - , cobrindo OBRIGATORIAMENTE: identidade central e conflito interno; traços dominantes com exemplo concreto; JEITO DE FALAR (vocabulário, ritmo, bordões/expressões típicas, como trata o interlocutor); valores e o que NUNCA faria (limites invioláveis); relacionamentos-chave e como se refere a eles; como reage sob estresse/raiva/afeto; maneirismos físicos e gestos típicos;marcos que moldaram quem ele é; grau de humor/ironia/vulnerabilidade que mostra (e esconde)"}'},
         {role:'user',content:'PERSONAGEM: '+nome+'\nJÁ INFORMADO (não alterar): '+JSON.stringify(ja)+'\n\nMATERIAL:\n'+materia}]);
       o=tentaJSON(r);
     }catch(e){ o=null; }
@@ -1346,12 +1369,14 @@ async function pesquisarFicha(){
     const seg=Math.round((Date.now()-t0)/1000);
     if(o&&typeof o==='object'){
       put('#q-origem',o.origem||origem); put('#q-apar',o.aparencia); put('#q-pers',o.personalidade); put('#q-hist',o.historia); put('#q-hab',o.habilidades);
-      toast('🔎 ficha preenchida em '+seg+'s — confira os campos');
+      if(o.essencia&&String(o.essencia).length>120){ ESSENCIA_TEMP=String(o.essencia).slice(0,4000); plog('nota','ESSENÇA destilada ('+ESSENCIA_TEMP.split('\n').length+' linhas)'); }
+      toast('🔎 ficha + essência prontas em '+seg+'s — vai ficar fiel');
     }else{
-      const fonte=(extra&&extra.txt?extra.txt:(resumo?resumo.extract:materia));
-      const alt=fonte.split('\n').map(l=>l.trim()).filter(l=>l.length>25).slice(0,6).map(l=>'• '+l).join('\n');
-      put('#q-hist',alt||fonte.slice(0,600)); put('#q-origem',origem);
-      toast('🔎 preenchido direto da Wikipédia ('+seg+'s) — IA indisponível pra detalhar');
+      const fonte=(lidas.find(([,x])=>x&&x.txt)||[])[1];
+      const txt=fonte?fonte.txt:(lidas.find(([r])=>r&&r.extract)||[])[0].extract;
+      const alt=(txt||'').split('\n').map(l=>l.trim()).filter(l=>l.length>25).slice(0,8).map(l=>'• '+l).join('\n');
+      put('#q-hist',alt||''); put('#q-origem',origem);
+      toast('🔎 preenchido direto das fontes ('+seg+'s) — IA indisponível pra essência');
     }
   }catch(e){ toast('⚠️ '+e.message); }
   btn.disabled=false; btn.textContent=btnTxt;
