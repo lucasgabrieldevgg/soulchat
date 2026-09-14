@@ -80,6 +80,8 @@
   .at-item.on,.at-item:hover{background:rgba(139,124,247,.18)}
   .at-item img,.at-item .av{width:27px;height:27px;border-radius:50%;object-fit:cover;flex:none}
   .at-item b{font-weight:600}
+  .mention{color:#b3a5ff;background:rgba(139,124,247,.16);padding:1px 5px;border-radius:7px;font-weight:600}
+  .user .gtt{white-space:pre-wrap;word-break:break-word}
   .gctx input{width:100%;box-sizing:border-box;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.13);border-radius:10px;color:var(--tx);padding:8px 10px;font-size:13px}
   /* respiro pra cima do composer fixo: a última fala do narrador nunca fica escondida atrás da caixa de escrever */
   #v-hist{padding-bottom:160px}
@@ -1004,7 +1006,8 @@ function systemPrompt(){
   if(H.modo==='grupo'&&H.grupo&&H.grupo.length){
     const parts=H.grupo.map(m=>{
       const e=essenciaDe(m);
-      return '@'+m.nome+(m.ctx?' — papel aqui: '+m.ctx:'')+(e?'\n  ESSENCA: '+e.split('\n').slice(0,10).join(' | '):'');
+      const maxLin=(H.grupo.length>6?6:10);
+      return '@'+m.nome+(m.ctx?' — papel aqui: '+m.ctx:'')+(e?'\n  ESSENCA: '+e.split('\n').slice(0,maxLin).join(' | '):'');
     }).join('\n');
     p.push(`GRUPO "${H.grupoT||'sem nome'}" — PARTICIPANTES (personagens INDEPENDENTES; cada um fala só por si):
 ${parts}
@@ -1099,6 +1102,7 @@ function processarCodigos(entrada){
 
 async function enviar(){
   if(ocupado) return;
+  const am=$('#at-menu'); if(am) am.hidden=true;
   const ta=$('#in'); let txt=ta.value.trim();
   if(!txt) return;
   ta.value='';
@@ -1265,7 +1269,7 @@ function atAtualiza(){
   const m=antes.match(/@([\p{L}0-9'’ ]*)$/u);
   if(!m){ menu.hidden=true; return; }
   const q=norm(m[1]);
-  AT.itens=membros().filter(mm=>!q||norm(mm.nome).includes(q)).slice(0,8);
+  AT.itens=membros().filter(mm=>!q||norm(mm.nome).includes(q)).slice(0,12);
   if(!AT.itens.length){ menu.hidden=true; return; }
   AT.inicio=pos-m[0].length; AT.idx=0;
   menu.innerHTML=AT.itens.map((mm,i)=>'<button class="at-item'+(i===0?' on':'')+'" data-i="'+i+'" type="button">'+avHtml(mm.foto,mm.nome)+'<b>@'+esc(mm.nome)+'</b></button>').join('');
@@ -1398,12 +1402,14 @@ function render(){
     } else if(t.who==='grp'){
       const d=document.createElement('div'); d.className='grp-msg';
       d.innerHTML=(t.foto?`<img class="av" src="${esc(t.foto)}" alt="">`:`<span class="av avletra">${esc((t.nome||'?').trim()[0]||'?').toUpperCase()}</span>`)+`<div class="bub"><b class="gn">${esc(t.nome||'?')}</b><span class="gt"></span></div>`;
-      d.querySelector('.gt').textContent=t.text; f.appendChild(d);
+      d.querySelector('.gt').innerHTML=linkaMarks(t.text); f.appendChild(d);
     } else {
       const d=document.createElement('div'); d.className='user';
       const tag=(t.text||'').match(/^\((OOC[^)]*)\)/i);
       d.innerHTML=`<span class="tag">${tag?'· fora do personagem ·':'· você ·'}</span>`;
-      d.appendChild(document.createTextNode(t.text)); f.appendChild(d);
+      if(H&&H.modo==='grupo'){ const gt2=document.createElement('span'); gt2.className='gtt'; gt2.innerHTML=linkaMarks(t.text); d.appendChild(gt2); }
+      else d.appendChild(document.createTextNode(t.text));
+      f.appendChild(d);
     }
   }
   scrollFim();
@@ -1417,6 +1423,7 @@ function escolher(i){
   toast('Escolha anotada — pode ajustar e enviar');
 }
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function linkaMarks(t){ let s=esc(t); if(H&&H.modo==='grupo'){ for(const m of membros()){ s=s.replace(new RegExp('@'+m.nome.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),'<span class="mention">@'+esc(m.nome)+'</span>'); } } return s; }
 
 /* ============ gerenciador de pesquisa UI ============ */
 function pintaNiveis(){
@@ -1732,7 +1739,7 @@ $('#in').addEventListener('keydown',e=>{
     if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault();
       AT.idx=(AT.idx+(e.key==='ArrowDown'?1:AT.itens.length-1))%AT.itens.length;
       menu.querySelectorAll('.at-item').forEach((b,i)=>b.classList.toggle('on',i===AT.idx)); return; }
-    if(e.key==='Enter'){ e.preventDefault(); atEscolhe(AT.idx); return; }
+    if(e.key==='Tab'){ e.preventDefault(); atEscolhe(AT.idx); return; }
     if(e.key==='Escape'){ menu.hidden=true; return; }
   }
   if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); enviar(); }
