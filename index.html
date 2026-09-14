@@ -75,6 +75,11 @@
   .gcard .ck{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.28);flex:none;display:flex;align-items:center;justify-content:center;font-size:13px}
   .gcard.on .ck{background:#8b7cf7;border-color:#8b7cf7}
   .gctx{margin:-3px 0 10px;padding:0 6px}
+  #at-menu{position:absolute;bottom:calc(100% - 6px);left:16px;right:16px;max-width:420px;margin:0 auto;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:5px;display:flex;flex-direction:column;gap:2px;max-height:190px;overflow:auto;box-shadow:var(--shadow);z-index:30}
+  .at-item{display:flex;gap:9px;align-items:center;padding:7px 9px;border-radius:10px;cursor:pointer;color:var(--tx);background:none;border:0;text-align:left;font:inherit;font-size:14px;width:100%}
+  .at-item.on,.at-item:hover{background:rgba(139,124,247,.18)}
+  .at-item img,.at-item .av{width:27px;height:27px;border-radius:50%;object-fit:cover;flex:none}
+  .at-item b{font-weight:600}
   .gctx input{width:100%;box-sizing:border-box;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.13);border-radius:10px;color:var(--tx);padding:8px 10px;font-size:13px}
   /* respiro pra cima do composer fixo: a última fala do narrador nunca fica escondida atrás da caixa de escrever */
   #v-hist{padding-bottom:160px}
@@ -369,6 +374,7 @@
 </main>
 
 <div id="composer" hidden>
+  <div id="at-menu" hidden></div>
   <div class="cbox">
     <textarea id="in" placeholder='Sua ação… *abro a porta* "Tem alguém?" · !pesquisar: tema · !resumo (⌨️)'></textarea>
     <button id="send" class="send" aria-label="Enviar">
@@ -1007,6 +1013,7 @@ REGRAS DO GRUPO:
 - Se a pessoa marcou alguém com @, responde o marcado. Se não marcou ninguém, entra quem fizer mais sentido NA HORA (varie!).
 - NUNCA escreva falas, ações, pensamentos ou reações de outro participante nem da pessoa.
 - PASSAR A VEZ: somente se for MUITO necessário (o outro foi diretamente chamado/afetado) — termine a resposta com @Nome dele. Máximo 1 passe por resposta. Nunca passe de volta pra quem acabou de falar. Sem a pessoa, o grupo NÃO continua sozinho.
+- Se a pessoa pedir pra você falar com/avisar/entregar recado a outro participante, atenda e termine a sua resposta com @NomeDele (ele recebe a vez).
 - Personagens podem discordar entre si com personalidade, mas sem monólogo coletivo e sem virar pingue-pongue infinito.`);
   }
   const mods=instrucoesMods();
@@ -1190,8 +1197,17 @@ let GSEL=[], GERENCIANDO=false;
 function membros(){ return (H&&H.grupo)?H.grupo:[]; }
 function nomeDeFicha(f){ const n=((f||'').split('\n').map(s=>s.replace(/^Nome:\s*/i,'').trim()).find(s=>s.length>1))||''; return n.split(/\s+/).slice(0,3).join(' '); }
 function norm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
-function membroPorNome(n){ const alvo=norm(n).replace(/^@/,'').trim(); if(!alvo) return null; const ms=membros();
-  return ms.find(m=>norm(m.nome)===alvo)||ms.find(m=>norm(m.nome).split(/\s+/)[0]===alvo.split(/\s+/)[0])||ms.find(m=>norm(m.nome).includes(alvo)||alvo.includes(norm(m.nome).split(/\s+/)[0]))||null; }
+function membroPorNome(n){ const ms=membros(); if(!ms.length) return null;
+  let partes=norm(n).replace(/^@/,'').trim().split(/\s+/);
+  partes=partes.filter(w=>w&&!['marcar','marque','falar','fala','fale','chamar','chama','avisar','avisa','responder','diz','diga','pra','para','com','os','as','que','ele','ela','de','do','da','no','na','um','uma','o','a','e'].includes(w));
+  if(!partes.length) return null;
+  for(const k of [partes.length,Math.min(partes.length,2),1]){
+    const t=partes.slice(0,k).join(' '); if(!t) continue;
+    const ex=ms.find(m=>norm(m.nome)===t); if(ex) return ex;
+    if(t.length>2){ const inc=ms.find(m=>norm(m.nome).includes(t)); if(inc) return inc; }
+  }
+  const prim=partes[0];
+  return ms.find(m=>norm(m.nome).split(/\s+/)[0]===prim)||null; }
 function essenciaDe(m){ const r=m&&m.id?biblio().find(x=>x.id===m.id):null; return (r&&r.dados&&r.dados.essencia)||m.ess||''; }
 function avHtml(foto,nome){ return foto?('<img class="av" src="'+esc(foto)+'" alt="">'):('<span class="av avletra">'+esc(((nome||'?').trim()[0]||'?').toUpperCase())+'</span>'); }
 
@@ -1237,6 +1253,34 @@ $('#g-go').onclick=async()=>{
   await iniciar('grupo',{grupo,grupoT:titulo});
   $('#g-go').disabled=false;
 };
+/* ── @autocomplete: menu de marcação no compositor ── */
+const AT={itens:[],idx:0,inicio:-1};
+function atAtualiza(){
+  const ta=$('#in'), menu=$('#at-menu');
+  if(!ta||!menu) return;
+  if(!H||H.modo!=='grupo'||menu.hidden&&false){}
+  if(!H||H.modo!=='grupo'){ menu.hidden=true; return; }
+  const pos=(ta.selectionStart!=null)?ta.selectionStart:ta.value.length;
+  const antes=ta.value.slice(0,pos);
+  const m=antes.match(/@([\p{L}0-9'’ ]*)$/u);
+  if(!m){ menu.hidden=true; return; }
+  const q=norm(m[1]);
+  AT.itens=membros().filter(mm=>!q||norm(mm.nome).includes(q)).slice(0,8);
+  if(!AT.itens.length){ menu.hidden=true; return; }
+  AT.inicio=pos-m[0].length; AT.idx=0;
+  menu.innerHTML=AT.itens.map((mm,i)=>'<button class="at-item'+(i===0?' on':'')+'" data-i="'+i+'" type="button">'+avHtml(mm.foto,mm.nome)+'<b>@'+esc(mm.nome)+'</b></button>').join('');
+  menu.querySelectorAll('.at-item').forEach(b=>{ b.onclick=()=>atEscolhe(+b.dataset.i); });
+  menu.hidden=false;
+}
+function atEscolhe(i){
+  const ta=$('#in'), menu=$('#at-menu');
+  const mm=AT.itens[i]; if(!mm||!ta) { menu.hidden=true; return; }
+  const pos=(ta.selectionStart!=null)?ta.selectionStart:ta.value.length;
+  ta.value=ta.value.slice(0,AT.inicio)+'@'+mm.nome+' '+ta.value.slice(pos);
+  menu.hidden=true; ta.focus();
+  const np=AT.inicio+mm.nome.length+2;
+  try{ ta.setSelectionRange(np,np); }catch(e){}
+}
 $('#m-grupo').onclick=()=>{ syncBiblio(); montarVGrupo(null); };
 $('#b-grupo').onclick=()=>{ if(H&&H.modo==='grupo') montarVGrupo(H.grupo); };
 
@@ -1294,9 +1338,9 @@ async function narrarGrupo(){
   ocupado=true; $('#send').disabled=true;
   try{
     const ult=(H.turnos[H.turnos.length-1]||{}).text||'';
-    let alvo=null; const mUM=ult.match(/@([\p{L}][\p{L}0-9 '’-]{0,40})/gu)||[];
+    let alvo=null; const mUM=[...ult.matchAll(/@([\p{L}][\p{L}0-9'’-]*(?:\s+[\p{L}0-9'’-]+){0,2})/gu)];
     for(const mm of mUM){ const m=membroPorNome(mm[1]); if(m){ alvo=m; break; } }
-    let passes=0, falante=alvo, primeira=true;
+    let passes=0, falante=alvo, primeira=true, jaRetentou=false;
     while(true){
       const th=pensandoEl(falante);
       let extra=primeira
@@ -1307,7 +1351,17 @@ async function narrarGrupo(){
       if(consultas){ plog('query','[auto] '+consultas.map(p=>(p.lang?p.lang+':':'')+p.q).join(' · ')); await rodarPesquisa(consultas);
         resp=await callAI(msgsParaIA(extra+'A pesquisa solicitada foi concluída (PESQUISA RECENTE). Agora responda como indicado.')); }
       th.remove();
-      const f=parseFalaGrupo(resp,falante);
+      let f=parseFalaGrupo(resp,falante);
+      /* a marcação da pessoa é LEI: se a IA respondeu como outro, reforça 1× e atribui ao marcado */
+      if(falante&&f.nome!==falante.nome){
+        if(!jaRetentou){ jaRetentou=true;
+          const th2=pensandoEl(falante);
+          resp=await callAI(msgsParaIA(extra+' ATENÇÃO: sua resposta anterior usou o personagem errado. Responda EXCLUSIVAMENTE como @'+falante.nome+' — comece com "@'+falante.nome+':" e NÃO escreva por nenhum outro personagem nem pela pessoa.'));
+          th2.remove();
+          f=parseFalaGrupo(resp,falante);
+        }
+        if(f.nome!==falante.nome) f={texto:f.texto,nome:falante.nome,foto:falante.foto};
+      }
       addTurno('grp',f.texto,null,f.nome,f.foto);
       salvar(); render(); falar(f.texto);
       if(passes>=GRUPO_MAX_PASSES) break;
@@ -1464,6 +1518,7 @@ function ver(id){ for(const v of['v-home','v-nova','v-per','v-hist','v-grupo']) 
   if(id==='v-home') renderBiblio();
   $('#composer').hidden=(id!=='v-hist');
   const bg=$('#b-grupo'); if(bg) bg.hidden=!(H&&H.modo==='grupo');
+  const am=$('#at-menu'); if(am) am.hidden=true;
   const ta=$('#in'); if(ta) ta.placeholder=(H&&H.modo==='grupo')?"@marcar quem vai falar · \"fala\" · *ação* · !resumo":'Sua ação… *abro a porta* "Tem alguém?" · !pesquisar: tema · !resumo (⌨️)'; }
 function novaHistoria(){ syncBiblio(); MODS_TEMP.length=0; MODS_CT_TEMP.length=0; editandoId=null; ver('v-home'); }
 $('#b-nova').onclick=()=>novaHistoria();
@@ -1670,7 +1725,19 @@ $('#codes-close').onclick=()=>{$('#m-codes').hidden=true;};
 
 /* ============ composer ============ */
 $('#send').onclick=enviar;
-$('#in').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); enviar(); } });
+$('#in').addEventListener('input',atAtualiza);
+$('#in').addEventListener('keydown',e=>{
+  const menu=$('#at-menu');
+  if(menu&&!menu.hidden&&AT.itens.length){
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault();
+      AT.idx=(AT.idx+(e.key==='ArrowDown'?1:AT.itens.length-1))%AT.itens.length;
+      menu.querySelectorAll('.at-item').forEach((b,i)=>b.classList.toggle('on',i===AT.idx)); return; }
+    if(e.key==='Enter'){ e.preventDefault(); atEscolhe(AT.idx); return; }
+    if(e.key==='Escape'){ menu.hidden=true; return; }
+  }
+  if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); enviar(); }
+});
+document.addEventListener('click',e=>{ const menu=$('#at-menu'); if(menu&&!menu.hidden&&!e.target.closest('#at-menu')) menu.hidden=true; });
 
 /* ============ boot ============ */
 aplicaTema();
