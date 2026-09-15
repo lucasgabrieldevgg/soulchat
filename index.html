@@ -657,6 +657,9 @@ let editandoId=null;
 function biblio(){ return store.getJ('ch_biblio')||[]; }
 function setBiblio(b){ store.set('ch_biblio',JSON.stringify(b)); }
 function extraiFoto(f){ const m=(f||'').match(/Foto:\s*(\S+)/); return m?m[1]:''; }
+/* 🛡️ nada de nazismo/fascismo como "foto de personagem" (Commons mistura tópicos homônimos) */
+const FOTO_TIPO=/[\b_\-](logo|flag|bandeira|mapa|map|coat[- ]of[- ]arms|seal|poster|cover|screenshot|chart|diagram|stamp|selo)[\b_.\-]/i;   /* ícone do tema ≠ personagem */
+const FOTO_BAN=/(naz(i|ista|ismo)|hitler|third[ -]?reich|3[º°o]?\s?reich|su[aá]stica|swastika|sturmabteilung|wehrmacht|gestapo|nsdap|holocaust|bundesarchiv|stormtroopers?(?!.*(star wars|cosplay|lego|fictional|galactic)))/i;
 function tituloDe(hh){ const nome=(hh.ficha||'').split('\n').map(s=>s.replace(/^Nome:\s*/i,'').trim()).find(s=>s.length>1)||'';
   if(hh.modo==='grupo') return hh.grupoT||'Grupo';
   if(hh.modo==='personagem') return nome||hh.universo||'Sem título';
@@ -846,7 +849,7 @@ async function wdFacts(nome){
   const rot=e2.labels&&(e2.labels.pt||e2.labels.en);
   /* P18 = imagem oficial do item no Wikidata (Commons) — a foto certa do personagem */
   const imgRaw=e2.claims&&e2.claims.P18&&e2.claims.P18[0]&&e2.claims.P18[0].mainsnak&&e2.claims.P18[0].mainsnak.datavalue&&e2.claims.P18[0].mainsnak.datavalue.value;
-  const foto=(imgRaw&&typeof imgRaw==='string')?('https://commons.wikimedia.org/wiki/Special:FilePath/'+encodeURIComponent(imgRaw)+'?width=600'):'';
+  const foto=(imgRaw&&typeof imgRaw==='string'&&!FOTO_BAN.test(String(imgRaw)))?('https://commons.wikimedia.org/wiki/Special:FilePath/'+encodeURIComponent(imgRaw)+'?width=600'):'';
   const fatos=[];
   for(const[prop,label]of Object.entries(WD_PROPS)){
     const cl=e2.claims&&e2.claims[prop]; if(!cl||!cl.length) continue;
@@ -1628,7 +1631,9 @@ function pintaNiveisFicha(){
    estuda antes. Máximo = leitura completa + revisão crítica + fontes re-líveis. */
 async function pesquisarFicha(nivelIn){
   const nv=NIVEIS_FICHA[nivelIn||NIVEL_FICHA]||NIVEIS_FICHA.medio;
-  const nome=$('#q-nome').value.trim();
+  let nome=$('#q-nome').value.trim();
+  const nomeLimpo=nome.replace(/[=,;:|\\/]+/g,' ').replace(/\s+/g,' ').trim();
+  if(nomeLimpo!==nome){ nome=nomeLimpo; $('#q-nome').value=nome; }   /* sanitiza visível (ex.: "=" sem querer) */
   if(!nome){ toast('Escreva pelo menos o nome 🙂'); return; }
   const origem=$('#q-origem').value.trim();     /* lê ANTES de limpar */
   ['q-origem','q-apar','q-pers','q-hist','q-hab'].forEach(id=>{ const el=$('#'+id); if(el) el.value=''; });
@@ -1646,13 +1651,14 @@ async function pesquisarFicha(nivelIn){
       if(origem&&n.includes(norm(origem.split(/\s+/)[0]))) s-=8;
       return s;};
     passo('buscando fontes…');
+    let wikiSobreg=false;
     const buscarC=async(q)=>{
       let out=[];
       try{
-        const rp=wikiSearch(q,'pt',6).catch(()=>[]);
-        const re=wikiSearch(q,'en',6).catch(()=>[]);
+        const rp=wikiSearch(q,'pt',6).catch(()=>{wikiSobreg=true; return [];});
+        const re=wikiSearch(q,'en',6).catch(()=>{wikiSobreg=true; return [];});
         out=(await Promise.all([rp,re])).flat();
-      }catch(e){}
+      }catch(e){ wikiSobreg=true; }
       out.sort((a,b)=>pontua(a.title)-pontua(b.title)||(b.words||0)-(a.words||0));
       const vistos=new Set();
       return out.filter(a=>{const k=a.lang+':'+a.title.toLowerCase(); if(vistos.has(k))return false; vistos.add(k); return true;}).slice(0,nv.nArt);
@@ -1681,7 +1687,7 @@ async function pesquisarFicha(nivelIn){
       }
     }
     if(!melhores.length){
-      toast('Não achei "'+nome+'" — confere a grafia? (IA fora também bloqueia o resgate; tenta de novo)');
+      toast(wikiSobreg?'🌐 A Wikipédia está sobrecarregada agora (429) — espera 1 minutinho e tenta de novo':'Não achei "'+nome+'" — confere a grafia?');
       btn.disabled=false; btn.textContent=btnTxt; return;
     }
     let artOrigem=null;
@@ -1698,11 +1704,6 @@ async function pesquisarFicha(nivelIn){
     ));
     let roSum=null,roExt=null;
     if(artOrigem){ roSum=await wikiSummary(artOrigem.title,artOrigem.lang).catch(()=>null); roExt=await wikiExtract(artOrigem.title,artOrigem.lang).catch(()=>null); }
-    let foto='';
-    for(const [r,x,w] of lidas){ if(w&&w.foto){ foto=w.foto; break; } }
-    if(!foto) for(const [r] of lidas){ if(r&&(r.orig||r.thumb)){ foto=r.orig||r.thumb; break; } }
-    foto=foto.split('?')[0];
-    if(foto&&!$('#q-foto').value.trim()){ $('#q-foto').value=foto; pintaPreviewFoto(); }
     lidas.forEach(([r,x,w])=>{ if(r) plog('artigo',r.lang+':'+r.title,r.url); if(w) plog('wikidata',w.id+' · '+w.nome,w.fatos.slice(0,4).join('; ')); });
     if(roSum) plog('artigo','[universo] '+roSum.lang+':'+roSum.title,roSum.url);
     let materia='';
@@ -1713,8 +1714,17 @@ async function pesquisarFicha(nivelIn){
     });
     if(roSum) materia+='\n[UNIVERSO] '+roSum.title+': '+roSum.extract+'\n';
     if(roExt&&roExt.txt) materia+='TEXTO DO UNIVERSO:\n'+roExt.txt.slice(0,4000)+'\n';
-    if(!materia.trim()){ toast('Nada encontrado — preencha os campos manualmente'); return; }
+    if(!materia.trim()){
+      toast(wikiSobreg?'🌐 A Wikipédia está sobrecarregada agora (429) — espera 1 minutinho e tenta de novo':'Achei menções a "'+nome+'" mas não consegui ler os artigos — tenta de novo em segundos');
+      btn.disabled=false; btn.textContent=btnTxt; return;   /* NUNCA devolve só a foto */
+    }
     MATERIA_TEMP=materia.slice(0,16000);   /* fontes que a IA pode reler depois */
+    const limpaFoto=u=>{ try{ return decodeURIComponent(u||''); }catch(e){ return u||''; } };
+    let foto='';
+    for(const [r,x,w] of lidas){ if(w&&w.foto&&!FOTO_BAN.test((w.nome||'')+' '+(r&&r.title||''))&&!FOTO_TIPO.test((w.nome||'')+' '+limpaFoto(w.foto))){ foto=w.foto; break; } }
+    if(!foto) for(const [r] of lidas){ if(r&&(r.orig||r.thumb)&&!FOTO_BAN.test(r.title||'')&&!FOTO_TIPO.test((r.title||'')+' '+limpaFoto(r.orig||r.thumb))){ foto=r.orig||r.thumb; break; } }
+    foto=foto.split('?')[0];
+    if(foto&&!$('#q-foto').value.trim()){ $('#q-foto').value=foto; pintaPreviewFoto(); }
     passo('destilando a essência…');
     const g=s=>{const el=$(s);return el?el.value.trim():'';};
     const ja={nome,origem,aparencia:g('#q-apar'),personalidade:g('#q-pers'),historia:g('#q-hist'),habilidades:g('#q-hab')};
