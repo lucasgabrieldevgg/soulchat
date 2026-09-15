@@ -80,6 +80,7 @@
   .at-item.on,.at-item:hover{background:rgba(139,124,247,.18)}
   .at-item img,.at-item .av{width:27px;height:27px;border-radius:50%;object-fit:cover;flex:none}
   .at-item b{font-weight:600}
+  .at-x{align-self:flex-end;width:22px;height:22px;border-radius:50%;border:0;background:rgba(255,255,255,.1);color:var(--tx);cursor:pointer;font-size:12px;line-height:1;padding:0}
   .mention{color:#b3a5ff;background:rgba(139,124,247,.16);padding:1px 5px;border-radius:7px;font-weight:600}
   .user .gtt{white-space:pre-wrap;word-break:break-word}
   .gctx input{width:100%;box-sizing:border-box;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.13);border-radius:10px;color:var(--tx);padding:8px 10px;font-size:13px}
@@ -233,7 +234,7 @@
 <body>
 
 <header>
-  <div class="brand"><span class="soulmark">✦</span> <span>SoulChat</span> <small>· narração viva, você interfere</small></div>
+  <div class="brand"><span class="soulmark">✦</span> <span>SoulChat</span> <small>· narração viva, você interfere</small> <span id="versao" style="opacity:.45;font-size:10.5px;margin-left:4px"></span></div>
   <div class="hbtns">
     <button id="b-home" class="hbtn" title="Tela inicial — suas histórias" aria-label="Início">🏠</button>
     <button id="b-voz" class="hbtn" title="Narrar em voz alta" aria-label="Voz">🔊</button>
@@ -1296,7 +1297,8 @@ function atAtualiza(){
   AT.itens=membros().filter(mm=>!q||norm(mm.nome).includes(q)).slice(0,12);
   if(!AT.itens.length){ menu.hidden=true; return; }
   AT.inicio=atIdx; AT.idx=0;
-  menu.innerHTML=AT.itens.map((mm,i)=>'<button class="at-item'+(i===0?' on':'')+'" data-i="'+i+'" type="button">'+avHtml(mm.foto,mm.nome)+'<b>@'+esc(mm.nome)+'</b></button>').join('');
+  menu.innerHTML='<button class="at-x" type="button" aria-label="fechar">✕</button>'+AT.itens.map((mm,i)=>'<button class="at-item'+(i===0?' on':'')+'" data-i="'+i+'" type="button">'+avHtml(mm.foto,mm.nome)+'<b>@'+esc(mm.nome)+'</b></button>').join('');
+  const ax=menu.querySelector('.at-x'); if(ax) ax.onpointerdown=e=>{ e.preventDefault(); menu.hidden=true; };
   menu.querySelectorAll('.at-item').forEach(b=>{ b.onpointerdown=e=>{ e.preventDefault(); atEscolhe(+b.dataset.i); }; b.onclick=()=>atEscolhe(+b.dataset.i); });
   menu.hidden=false;
 }
@@ -1846,6 +1848,9 @@ if(H){
 }
 if(H&&H.turnos&&H.turnos.length){ ver('v-hist'); render(); }
 else ver('v-home');
+const VERSAO='v2026-09-15 22:21';
+{ const ve=$('#versao'); if(ve) ve.textContent=VERSAO; try{ console.log('SoulChat '+VERSAO); }catch(e){} }
+if(typeof navigator!=='undefined'&&'serviceWorker'in navigator){ try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }
 </script>
 </body>
 </html>
