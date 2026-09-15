@@ -788,7 +788,7 @@ async function wikiSearch(q,lang,lim){
   const u=`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=${lim}&format=json&origin=*`;
   const d=await getJSON(u);
   const out=(d.query&&d.query.search||[]).map(x=>({title:x.title,lang,snippet:(x.snippet||'').replace(/<[^>]*>/g,''),words:x.wordcount}));
-  PC.put(key,out); return out;
+  if(out.length) PC.put(key,out); return out;
 }
 /* Wikipédia: "você quis dizer?" — correção de grafia oficial */
 async function wikiSugestao(q,lang){
@@ -797,6 +797,16 @@ async function wikiSugestao(q,lang){
     const d=await getJSON(u);
     const s=d.query&&d.query.searchinfo&&d.query.searchinfo.suggestion;
     return (s&&String(s).trim())||'';
+  }catch(e){ return ''; }
+}
+/* IA corrige o nome quando nem a Wikipédia sabe ("luk skywalkr" → Luke Skywalker) */
+async function iaCorrige(q){
+  try{
+    const r=await callAI([
+      {role:'system',content:'Corrija a grafia do nome de um personagem/entidade (ficção, história, franquia, figura real). Responda SOMENTE o JSON {"nome":"Nome correto"}. Se não tiver ideia de quem seja, responda {"nome":""}.'},
+      {role:'user',content:'Nome digitado: '+q}]);
+    const o=tentaJSON(r);
+    return (o&&o.nome&&String(o.nome).trim())||'';
   }catch(e){ return ''; }
 }
 /* Wikipédia: resumo curto (REST) — inclui a foto principal da página */
@@ -1649,7 +1659,7 @@ async function pesquisarFicha(nivelIn){
     };
     let melhores=await buscarC(consulta);
     if(!melhores.length){
-      /* grafia errada? pergunta pra Wikipédia ("você quis dizer") e busca de novo */
+      /* RESGATE 1: grafia errada? a própria Wikipédia sugere ("você quis dizer") */
       passo('checando a grafia…');
       let sug='';
       try{
@@ -1662,7 +1672,16 @@ async function pesquisarFicha(nivelIn){
       }
     }
     if(!melhores.length){
-      toast('Não achei "'+nome+'" na Wikipédia — confere a grafia? (ex.: Stormtrooper)');
+      /* RESGATE 2: IA corrige o nome (typo que a Wikipédia não sugere) */
+      passo('pedindo ajuda pra IA…');
+      const nomeIA=await iaCorrige(nome+(origem?' ('+origem+')':''));
+      if(nomeIA&&norm(nomeIA)!==nn){
+        plog('nota','✨ IA ajustou o nome: "'+nome+'" → "'+nomeIA+'"');
+        melhores=await buscarC(nomeIA);
+      }
+    }
+    if(!melhores.length){
+      toast('Não achei "'+nome+'" — confere a grafia? (IA fora também bloqueia o resgate; tenta de novo)');
       btn.disabled=false; btn.textContent=btnTxt; return;
     }
     let artOrigem=null;
