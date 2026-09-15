@@ -1290,12 +1290,14 @@ function atAtualiza(){
   const antes=ta.value.slice(0,pos);
   const m=antes.match(/@([\p{L}0-9'’ ]*)$/u);
   if(!m){ menu.hidden=true; return; }
+  const atIdx=antes.length-m[0].length;                      /* onde o @ começa */
+  if(atIdx>0&&/[\p{L}0-9@]/u.test(antes[atIdx-1])){ menu.hidden=true; return; }   /* @ no meio de palavra não abre */
   const q=norm(m[1]);
   AT.itens=membros().filter(mm=>!q||norm(mm.nome).includes(q)).slice(0,12);
   if(!AT.itens.length){ menu.hidden=true; return; }
-  AT.inicio=pos-m[0].length; AT.idx=0;
+  AT.inicio=atIdx; AT.idx=0;
   menu.innerHTML=AT.itens.map((mm,i)=>'<button class="at-item'+(i===0?' on':'')+'" data-i="'+i+'" type="button">'+avHtml(mm.foto,mm.nome)+'<b>@'+esc(mm.nome)+'</b></button>').join('');
-  menu.querySelectorAll('.at-item').forEach(b=>{ b.onclick=()=>atEscolhe(+b.dataset.i); });
+  menu.querySelectorAll('.at-item').forEach(b=>{ b.onpointerdown=e=>{ e.preventDefault(); atEscolhe(+b.dataset.i); }; b.onclick=()=>atEscolhe(+b.dataset.i); });
   menu.hidden=false;
 }
 function atEscolhe(i){
@@ -1819,6 +1821,8 @@ $('#codes-close').onclick=()=>{$('#m-codes').hidden=true;};
 /* ============ composer ============ */
 $('#send').onclick=enviar;
 $('#in').addEventListener('input',atAtualiza);
+$('#in').addEventListener('blur',()=>{ setTimeout(()=>{ const m2=$('#at-menu'); if(m2) m2.hidden=true; },140); });
+document.addEventListener('selectionchange',()=>{ const m2=$('#at-menu'); if(m2&&!m2.hidden) atAtualiza(); });
 $('#in').addEventListener('keydown',e=>{
   const menu=$('#at-menu');
   if(menu&&!menu.hidden&&AT.itens.length){
