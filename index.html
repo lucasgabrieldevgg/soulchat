@@ -790,6 +790,15 @@ async function wikiSearch(q,lang,lim){
   const out=(d.query&&d.query.search||[]).map(x=>({title:x.title,lang,snippet:(x.snippet||'').replace(/<[^>]*>/g,''),words:x.wordcount}));
   PC.put(key,out); return out;
 }
+/* Wikipédia: "você quis dizer?" — correção de grafia oficial */
+async function wikiSugestao(q,lang){
+  try{
+    const u=`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=1&srinfo=metadata|suggestion&format=json&origin=*`;
+    const d=await getJSON(u);
+    const s=d.query&&d.query.searchinfo&&d.query.searchinfo.suggestion;
+    return (s&&String(s).trim())||'';
+  }catch(e){ return ''; }
+}
 /* Wikipédia: resumo curto (REST) — inclui a foto principal da página */
 async function wikiSummary(title,lang){
   const key='m:'+lang+':'+title;
@@ -1627,15 +1636,35 @@ async function pesquisarFicha(nivelIn){
       if(origem&&n.includes(norm(origem.split(/\s+/)[0]))) s-=8;
       return s;};
     passo('buscando fontes…');
-    let rs=[];
-    try{
-      const rp=wikiSearch(consulta,'pt',6).catch(()=>[]);
-      const re=wikiSearch(consulta,'en',6).catch(()=>[]);
-      rs=(await Promise.all([rp,re])).flat();
-    }catch(e){}
-    rs.sort((a,b)=>pontua(a.title)-pontua(b.title)||(b.words||0)-(a.words||0));
-    const vistos=new Set();
-    const melhores=rs.filter(a=>{const k=a.lang+':'+a.title.toLowerCase(); if(vistos.has(k))return false; vistos.add(k); return true;}).slice(0,nv.nArt);
+    const buscarC=async(q)=>{
+      let out=[];
+      try{
+        const rp=wikiSearch(q,'pt',6).catch(()=>[]);
+        const re=wikiSearch(q,'en',6).catch(()=>[]);
+        out=(await Promise.all([rp,re])).flat();
+      }catch(e){}
+      out.sort((a,b)=>pontua(a.title)-pontua(b.title)||(b.words||0)-(a.words||0));
+      const vistos=new Set();
+      return out.filter(a=>{const k=a.lang+':'+a.title.toLowerCase(); if(vistos.has(k))return false; vistos.add(k); return true;}).slice(0,nv.nArt);
+    };
+    let melhores=await buscarC(consulta);
+    if(!melhores.length){
+      /* grafia errada? pergunta pra Wikipédia ("você quis dizer") e busca de novo */
+      passo('checando a grafia…');
+      let sug='';
+      try{
+        sug=await wikiSugestao(consulta,'en');
+        if(!sug) sug=await wikiSugestao(consulta,'pt');
+      }catch(e){}
+      if(sug&&norm(sug)!==nn){
+        plog('nota','✏️ grafia ajustada: "'+consulta+'" → "'+sug+'"');
+        melhores=await buscarC(sug);
+      }
+    }
+    if(!melhores.length){
+      toast('Não achei "'+nome+'" na Wikipédia — confere a grafia? (ex.: Stormtrooper)');
+      btn.disabled=false; btn.textContent=btnTxt; return;
+    }
     let artOrigem=null;
     if(origem&&nv.origemArt){
       try{
