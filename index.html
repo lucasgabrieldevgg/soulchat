@@ -459,7 +459,7 @@
 <div id="m-cfg" class="modal" hidden>
   <div class="msheet">
     <h2>⚙️ Preferências</h2>
-    <p class="hint">A IA já vem funcionando (proxy do criador, em segredo no servidor) — nada pra configurar aqui. Só o gostinho.</p>
+    <p class="hint">A IA já vem funcionando (proxy do criador, em segredo no servidor) — nada pra configurar aqui. A IA é grátis com limite diário (pra o site continuar de pé pra todo mundo).</p>
     <label>🌐 Idioma do site/narração</label>
     <select id="cfg-lang">
       <option value="auto">Automático (acompanha o idioma que você escrever)</option>
@@ -1849,7 +1849,7 @@ if(H){
 }
 if(H&&H.turnos&&H.turnos.length){ ver('v-hist'); render(); }
 else ver('v-home');
-const VERSAO='v2026-09-17 19:30';
+const VERSAO='v2026-09-18 00:45';
 { const ve=$('#versao'); if(ve) ve.textContent=VERSAO; try{ console.log('SoulChat '+VERSAO); }catch(e){} }
 if(typeof navigator!=='undefined'&&'serviceWorker'in navigator){ try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }
 </script>
