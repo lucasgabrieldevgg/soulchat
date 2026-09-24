@@ -1,8 +1,11 @@
 # ✦ SoulChat
 
+[![testes](https://github.com/lucasgabrieldevgg/soulchat/actions/workflows/ci.yml/badge.svg)](https://github.com/lucasgabrieldevgg/soulchat/actions/workflows/ci.yml)
+
 > Narração viva com IA — você interfere, a história se adapta. Sucessor do *Contador de Histórias*.
 
-**Jogue agora:** https://lucasgabrieldevgg.github.io/soulchat
+## 🌐 Jogue agora
+**https://lucasgabrieldevgg.github.io/soulchat** — sem conta, sem chave: a IA vem de fábrica. Teu progresso fica no teu navegador.
 
 Um arquivo só, zero instalação, roda no navegador (desktop e celular). A IA já vem funcionando de fábrica — não precisa criar conta nem colar chave nenhuma.
 
@@ -29,3 +32,6 @@ HTML/CSS/JS num arquivo único · APIs públicas da Wikipédia/Wikidata (CORS li
 ---
 
 Feito para narrar. ✦
+
+## Licença
+MIT — vê o arquivo [LICENSE](LICENSE).

@@ -1,0 +1,12 @@
+{
+  "name": "soulchat",
+  "private": true,
+  "version": "1.0.0",
+  "description": "✦ SoulChat — narração viva com IA (single-file)",
+  "scripts": {
+    "test": "node tests/soulchat_test.cjs"
+  },
+  "dependencies": {
+    "jsdom": "^29.1.1"
+  }
+}
