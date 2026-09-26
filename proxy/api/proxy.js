@@ -46,8 +46,11 @@ function origemOk(o){
 }
 
 export default async function handler(request) {
+  const origemReq = request.headers.get('Origin') || request.headers.get('Referer') || '';
+  const acao = origemOk(origemReq) ? (origemReq === 'null' ? 'null' : (origemReq.startsWith('file://') ? SITE : new URL(origemReq).origin)) : SITE;
   const cors = {
-    'Access-Control-Allow-Origin': SITE,
+    'Access-Control-Allow-Origin': acao,
+    'Vary': 'Origin',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
@@ -78,6 +81,28 @@ export default async function handler(request) {
   let body;
   try { body = await request.json(); } catch (e) { return j({ erro: 'json inválido' }, 400); }
   const { provider, model, messages } = body || {};
+
+  /* ═══ modo busca (grátis, sem chave): OpenAlex — ciência real ═══
+     Mesma fila/cota/origem do resto. Resposta: {resultados:[{t,u,s}]} */
+  if (body.acao === 'busca') {
+    const q = String(body.q || '').slice(0, 300).trim();
+    if (!q) return j({ erro: 'sem consulta' }, 400);
+    try {
+      const u = 'https://api.openalex.org/works?filter=title.search:' + encodeURIComponent(q) +
+        '&per-page=4&select=title,doi,publication_year,cited_by_count,primary_location&mailto=app-semeador@proton.me';
+      const r = await fetch(u, { signal: AbortSignal.timeout(9000) });
+      const d = await r.json();
+      const resultados = (d.results || []).map(w => ({
+        t: String(w.title || '').slice(0, 140),
+        u: (w.doi && /^https?:/.test(w.doi)) ? w.doi.slice(0, 300) : (w.primary_location && w.primary_location.landing_page_url) || '',
+        s: (w.publication_year || '?') + ' · citado ' + (w.cited_by_count || 0) + '×'
+      })).filter(x => x.t && x.u);
+      return j({ resultados });
+    } catch (e) {
+      return j({ resultados: [], erro: 'busca indisponível agora' });
+    }
+  }
+
   if (!UPSTREAM[provider] || !Array.isArray(messages)) return j({ erro: 'pedido malformado' }, 400);
 
   /* a chave NUNCA vem do navegador — vem das env vars da Vercel */
