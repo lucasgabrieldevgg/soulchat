@@ -1,37 +1,40 @@
+[🇧🇷 Português](README.pt-BR.md)
+
 # ✦ SoulChat
 
-[![testes](https://github.com/lucasgabrieldevgg/soulchat/actions/workflows/ci.yml/badge.svg)](https://github.com/lucasgabrieldevgg/soulchat/actions/workflows/ci.yml)
+[![tests](https://github.com/lucasgabrieldevgg/soulchat/actions/workflows/ci.yml/badge.svg)](https://github.com/lucasgabrieldevgg/soulchat/actions/workflows/ci.yml)
 
-> Narração viva com IA — você interfere, a história se adapta. Sucessor do *Contador de Histórias*.
+> Living AI narration — you steer, the story adapts. Successor to *Contador de Histórias*.
 
-## 🌐 Jogue agora
-**https://lucasgabrieldevgg.github.io/soulchat** — sem conta, sem chave: a IA vem de fábrica. Teu progresso fica no teu navegador.
+## 🌐 Play now
+**https://lucasgabrieldevgg.github.io/soulchat** — no account, no key: AI works out of the box. Your progress stays in your browser.
 
-Um arquivo só, zero instalação, roda no navegador (desktop e celular). A IA já vem funcionando de fábrica — não precisa criar conta nem colar chave nenhuma.
+One single file, zero install, runs in the browser (desktop and mobile). AI comes working out of the box — no sign-up, no pasting keys.
 
-## O que faz
+## Features
 
-- **📖 Nova história** — universo + premissa; o narrador conduz e oferece escolhas com prós e contras a cada cena
-- **🎭 Com personagem** — preencha a ficha do zero, cole uma pronta, ou digite só o nome e deixe a **🔎 pesquisa preencher tudo** (incluindo a foto, puxada da Wikipédia)
-- **⚡ Modificadores** — 10 estilos (mais diálogo, ação, romance, humor, terror, slow burn, sensorial, 1ª pessoa, épico, respostas curtas) + crie os seus. Liga/desliga no meio da conversa
-- **📜 Chatlog mestre** — a IA mantém um resumo vivo da história e o relê antes de responder: a memória não "estoura" em histórias longas
-- **🔍 Pesquisa funda** — Wikipédia + Wikidata em **qualquer idioma** (a IA escolhe idioma e estratégia e para quando já tem a informação). 3 níveis: ⚡ Rápida · 🎯 Padrão · 🌍 Completa
-- **🔊 Voz**, **⬇️ export .txt**, códigos inline (`*ação*`, `"fala"`, `(OOC:)`, `!opcoes`, `!tom`, `!lembrar:`, `!pesquisar:`, `!resumo`…) e **⌨️ legenda sempre à mão**
+- **📖 New story** — universe + premise; the narrator leads the scene and offers choices with pros and cons
+- **🎭 With a character** — fill the sheet from scratch, paste a ready one, or type just a name and let the **🔎 search fill it all in** (including the photo, pulled from Wikipedia)
+- **⚡ Modifiers** — 10 styles (more dialogue, action, romance, humor, horror, slow burn, sensory, 1st person, epic, short replies) + create your own. Toggle mid-conversation
+- **📜 Master chatlog** — the AI keeps a living summary of the story and re-reads it before replying: memory doesn't "blow up" on long stories
+- **🔍 Deep search** — Wikipedia + Wikidata in **any language** (the AI picks language and strategy and stops once it has the answer). 3 levels: ⚡ Quick · 🎯 Standard · 🌍 Full
+- **🔊 Voice**, **⬇️ .txt export**, inline codes (`*action*`, `"speech"`, `(OOC:)`, `!options`, `!tone`, `!remember:`, `!search:`, `!summary`…) and **⌨️ captions always at hand**
 
-## IA e privacidade
+## AI & privacy
 
-- **Sem chave exposta**: o site chama o proxy **soulchat-proxy.vercel.app** (Edge Function na Vercel), que guarda as chaves em segredo no servidor
-- **Fila automática**: proxy→OpenRouter (Gemma 4 26B grátis) → proxy→NVIDIA (GPT-OSS 20B) → Pollinations
-- Quer usar a SUA chave? ⚙️ → cole (OpenRouter/NVIDIA) — entra na frente da fila e fica só no seu navegador
-- História e configurações ficam no `localStorage` do seu navegador. Nada de rastreamento.
+- **No exposed keys**: the site calls the **soulchat-proxy.vercel.app** proxy (Vercel Edge Function), which keeps the keys server-side
+- **Automatic queue**: proxy→OpenRouter (free Gemma 4 26B) → proxy→NVIDIA (GPT-OSS 20B) → Pollinations
+- Want to use YOUR key? ⚙️ → paste it (OpenRouter/NVIDIA) — it jumps the queue and stays in your browser only
+- Story and settings live in your browser's `localStorage`. No tracking.
 
 ## Stack
 
-HTML/CSS/JS num arquivo único · APIs públicas da Wikipédia/Wikidata (CORS liberado, grátis) · Edge Function na Vercel (plano Hobby) · GitHub Pages
+HTML/CSS/JS in a single file · public Wikipedia/Wikidata APIs (CORS enabled, free) · Vercel Edge Function (Hobby plan) · GitHub Pages
 
 ---
 
-Feito para narrar. ✦
+Built to narrate. ✦
 
-## Licença
-MIT — vê o arquivo [LICENSE](LICENSE).
+## License
+
+MIT — see [LICENSE](LICENSE).
